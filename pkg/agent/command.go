@@ -28,6 +28,7 @@ type commandAgent struct {
 	command           string
 	args              []string
 	env               []string
+	workingDir        string
 	timeout           time.Duration
 	hasPromptTemplate bool
 }
@@ -54,6 +55,10 @@ func newCommandAgent(config map[string]any) (*commandAgent, error) {
 			a.hasPromptTemplate = true
 			break
 		}
+	}
+
+	if dir, ok := config["working_dir"].(string); ok {
+		a.workingDir = dir
 	}
 
 	if env, ok := config["env"].(map[string]any); ok {
@@ -84,6 +89,10 @@ func (a *commandAgent) Execute(ctx context.Context, input model.TaskInput) (*mod
 	}
 
 	cmd := exec.CommandContext(ctx, a.command, args...)
+
+	if a.workingDir != "" {
+		cmd.Dir = a.workingDir
+	}
 
 	if !a.hasPromptTemplate {
 		cmd.Stdin = strings.NewReader(input.Prompt)

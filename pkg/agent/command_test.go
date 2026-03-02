@@ -5,6 +5,8 @@ package agent
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -175,5 +177,88 @@ func TestCommandAgent_Execute_TemplateDoesNotMutateOriginalArgs(t *testing.T) {
 	}
 	if out.Text != "second" {
 		t.Errorf("output = %q, want %q", out.Text, "second")
+	}
+}
+
+func TestNewCommandAgent_WorkingDir(t *testing.T) {
+	a, err := newCommandAgent(map[string]any{
+		"command":     "echo",
+		"working_dir": "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if a.workingDir != "/tmp" {
+		t.Errorf("workingDir = %q, want %q", a.workingDir, "/tmp")
+	}
+}
+
+func TestNewCommandAgent_WorkingDirDefault(t *testing.T) {
+	a, err := newCommandAgent(map[string]any{
+		"command": "echo",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if a.workingDir != "" {
+		t.Errorf("workingDir = %q, want empty", a.workingDir)
+	}
+}
+
+func TestCommandAgent_Execute_WorkingDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping on windows")
+	}
+
+	// Create a temp dir and run pwd in it to verify working_dir takes effect.
+	dir := t.TempDir()
+
+	a, err := newCommandAgent(map[string]any{
+		"command":     "pwd",
+		"working_dir": dir,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out, err := a.Execute(context.Background(), model.TaskInput{Prompt: ""})
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	// Resolve symlinks for macOS where /tmp -> /private/tmp.
+	resolvedDir, _ := filepath.EvalSymlinks(dir)
+	resolvedOut, _ := filepath.EvalSymlinks(out.Text)
+	if resolvedOut != resolvedDir {
+		t.Errorf("output = %q, want %q", out.Text, resolvedDir)
+	}
+}
+
+func TestCommandAgent_Execute_WorkingDirRelativeCommand(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping on windows")
+	}
+
+	// Create a temp dir with a script, then run it via relative path using working_dir.
+	dir := t.TempDir()
+	script := filepath.Join(dir, "hello.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho hello"), 0755); err != nil {
+		t.Fatalf("failed to write script: %v", err)
+	}
+
+	a, err := newCommandAgent(map[string]any{
+		"command":     "./hello.sh",
+		"working_dir": dir,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out, err := a.Execute(context.Background(), model.TaskInput{Prompt: ""})
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+	if out.Text != "hello" {
+		t.Errorf("output = %q, want %q", out.Text, "hello")
 	}
 }
