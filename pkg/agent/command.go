@@ -21,12 +21,15 @@ func init() {
 }
 
 // commandAgent executes an external command as the agent.
-// The task prompt is passed via stdin, and stdout is captured as the output.
+// The task prompt is passed via stdin by default. If any arg contains
+// {{.Prompt}}, the prompt is substituted into the args instead and
+// stdin is not used.
 type commandAgent struct {
-	command string
-	args    []string
-	env     []string
-	timeout time.Duration
+	command           string
+	args              []string
+	env               []string
+	timeout           time.Duration
+	hasPromptTemplate bool
 }
 
 func newCommandAgent(config map[string]any) (*commandAgent, error) {
@@ -43,6 +46,13 @@ func newCommandAgent(config map[string]any) (*commandAgent, error) {
 	if args, ok := config["args"].([]any); ok {
 		for _, arg := range args {
 			a.args = append(a.args, fmt.Sprintf("%v", arg))
+		}
+	}
+
+	for _, arg := range a.args {
+		if strings.Contains(arg, "{{.Prompt}}") {
+			a.hasPromptTemplate = true
+			break
 		}
 	}
 
@@ -65,8 +75,19 @@ func (a *commandAgent) Execute(ctx context.Context, input model.TaskInput) (*mod
 	ctx, cancel := context.WithTimeout(ctx, a.timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, a.command, a.args...)
-	cmd.Stdin = strings.NewReader(input.Prompt)
+	args := a.args
+	if a.hasPromptTemplate {
+		args = make([]string, len(a.args))
+		for i, arg := range a.args {
+			args[i] = strings.ReplaceAll(arg, "{{.Prompt}}", input.Prompt)
+		}
+	}
+
+	cmd := exec.CommandContext(ctx, a.command, args...)
+
+	if !a.hasPromptTemplate {
+		cmd.Stdin = strings.NewReader(input.Prompt)
+	}
 
 	if len(a.env) > 0 {
 		cmd.Env = append(cmd.Environ(), a.env...)
