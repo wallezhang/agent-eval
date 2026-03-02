@@ -1,0 +1,36 @@
+- id: fizzbuzz
+  name: "FizzBuzz 实现"
+  tags: [coding, easy]
+  input:
+    prompt: |
+      Write a Python function called fizzbuzz(n) that returns a list of strings
+      for numbers 1 to n. For multiples of 3, use "Fizz". For multiples of 5,
+      use "Buzz". For multiples of both, use "FizzBuzz". Otherwise, use the
+      number as a string. Return ONLY the Python code, no explanations.
+  graders:
+    - type: contains
+      config:
+        keywords:
+          - "def fizzbuzz"
+          - "Fizz"
+          - "Buzz"
+          - "FizzBuzz"
+    - type: regex
+      config:
+        pattern: "def fizzbuzz\\s*\\(\\s*n\\s*\\)"
+
+- id: reverse-string
+  name: "字符串反转"
+  tags: [coding, easy]
+  input:
+    prompt: |
+      Write a Python function called reverse_string(s) that reverses a string
+      without using slicing ([::-1]). Return ONLY the Python code.
+  graders:
+    - type: contains
+      config:
+        keywords:
+          - "def reverse_string"
+    - type: regex
+      config:
+        pattern: "def reverse_string\\s*\\(\\s*s\\s*\\)"

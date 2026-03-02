@@ -1,0 +1,27 @@
+name: "simple-eval"
+description: "Simple evaluation example using a command agent"
+
+agent:
+  type: command
+  config:
+    command: echo
+    args: ["巴黎"]
+
+defaults:
+  trials_per_task: 3
+  graders:
+    - type: exact_match
+      config:
+        ignore_case: true
+        ignore_whitespace: true
+
+execution:
+  concurrency: 2
+  timeout: 30s
+
+task_files:
+  - tasks/*.yaml
+
+output:
+  format: all
+  dir: ./results

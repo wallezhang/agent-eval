@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluation Report: {{.SuiteName}}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; padding: 2rem; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .meta { color: #666; font-size: 0.875rem; margin-bottom: 2rem; }
+  .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: #fff; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .card .label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+  .card .value { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+  .card .value.green { color: #16a34a; }
+  .card .value.red { color: #dc2626; }
+  .card .value.blue { color: #2563eb; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+  th { background: #f8fafc; text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: #666; border-bottom: 2px solid #e2e8f0; }
+  td { padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+  .badge.passed { background: #dcfce7; color: #16a34a; }
+  .badge.failed { background: #fee2e2; color: #dc2626; }
+  .badge.error { background: #fef3c7; color: #d97706; }
+  .badge.pending { background: #e2e8f0; color: #64748b; }
+  .detail { margin-top: 0.5rem; }
+  .detail-toggle { cursor: pointer; color: #2563eb; font-size: 0.8rem; }
+  .detail-content { display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f8fafc; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; }
+  .detail-content.show { display: block; }
+  footer { text-align: center; color: #999; font-size: 0.75rem; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>{{.SuiteName}}</h1>
+  <div class="meta">
+    {{if .Description}}{{.Description}}<br>{{end}}
+    Agent: {{.AgentType}} | Run ID: {{shortID .ID}} | Duration: {{.DurationMS}}ms
+  </div>
+
+  <div class="summary-cards">
+    <div class="card">
+      <div class="label">Pass Rate</div>
+      <div class="value {{if ge .Summary.OverallPassRate 0.8}}green{{else if ge .Summary.OverallPassRate 0.5}}blue{{else}}red{{end}}">{{pct .Summary.OverallPassRate}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Avg Score</div>
+      <div class="value blue">{{score .Summary.AvgScore}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Trials</div>
+      <div class="value">{{.Summary.TotalTrials}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Avg pass@k</div>
+      <div class="value blue">{{score .Summary.AvgPassAtK}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Avg pass^k</div>
+      <div class="value blue">{{score .Summary.AvgPassPowerK}}</div>
+    </div>
+  </div>
+
+  <h2 style="margin-bottom:1rem;">Task Results</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>Pass</th>
+        <th>Fail</th>
+        <th>Error</th>
+        <th>Avg Score</th>
+        <th>pass@k</th>
+        <th>pass^k</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .TaskResults}}
+      <tr>
+        <td><strong>{{if .Task.Name}}{{.Task.Name}}{{else}}{{.Task.ID}}{{end}}</strong><br><small style="color:#888">{{.Task.ID}}</small></td>
+        <td><span class="badge passed">{{.PassCount}}</span></td>
+        <td>{{if gt .FailCount 0}}<span class="badge failed">{{.FailCount}}</span>{{else}}0{{end}}</td>
+        <td>{{if gt .ErrorCount 0}}<span class="badge error">{{.ErrorCount}}</span>{{else}}0{{end}}</td>
+        <td>{{score .AvgScore}}</td>
+        <td>{{score .PassAtK}}</td>
+        <td>{{score .PassPowerK}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <h2 style="margin-bottom:1rem;">Trial Details</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>#</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>Duration</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .TaskResults}}{{$taskID := .Task.ID}}
+      {{range .Trials}}
+      <tr>
+        <td>{{$taskID}}</td>
+        <td>{{.Index}}</td>
+        <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
+        <td>{{score .Score}}</td>
+        <td>{{.DurationMS}}ms</td>
+        <td>
+          {{if .Error}}<span style="color:#dc2626">{{.Error}}</span>{{end}}
+          {{range .Grades}}
+          <div><small>[{{.GraderType}}] score={{score .Score}} {{if .Pass}}PASS{{else}}FAIL{{end}}</small></div>
+          {{if .Reason}}<div><small style="color:#666">{{.Reason}}</small></div>{{end}}
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+      {{end}}
+    </tbody>
+  </table>
+
+  <footer>Generated by agent-eval</footer>
+</div>
+<script>
+document.querySelectorAll('.detail-toggle').forEach(el => {
+  el.addEventListener('click', () => {
+    const content = el.nextElementSibling;
+    content.classList.toggle('show');
+    el.textContent = content.classList.contains('show') ? 'Hide details' : 'Show details';
+  });
+});
+</script>
+</body>
+</html>
