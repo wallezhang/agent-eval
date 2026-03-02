@@ -264,12 +264,21 @@ agent:
   config:
     command: python
     args: ["-m", "my_agent"]
+    working_dir: /path/to/project      # 可选，命令执行的工作目录
     timeout: 120s
     env:
       MODEL_PATH: /path/to/model
 ```
 
-任务的 `prompt` 通过 stdin 传入，stdout 作为 Agent 输出。
+任务的 `prompt` 默认通过 stdin 传入，stdout 作为 Agent 输出。如果 `args` 中包含 `{{.Prompt}}`，则 prompt 会替换到参数中，不再通过 stdin 传入：
+
+```yaml
+agent:
+  type: command
+  config:
+    command: echo
+    args: ["{{.Prompt}}"]
+```
 
 ### 评分器类型
 
