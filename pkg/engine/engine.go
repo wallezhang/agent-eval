@@ -57,12 +57,13 @@ func (e *Engine) Execute(ctx context.Context) (*model.EvalRun, error) {
 	}
 
 	// Execute trials using the scheduler.
-	sched := newScheduler(e.suite.Execution.Concurrency, e.suite.Execution.RateLimitRPS)
+	sched := newScheduler(e.suite.Execution.Concurrency, e.suite.Execution.RateLimitRPS, e.logger)
 	trials, err := sched.Run(ctx, workItems, func(ctx context.Context, item workItem) (*model.Trial, error) {
 		runner := &Runner{
 			agent:   e.agent,
 			graders: taskGraders[item.task.ID],
 			timeout: e.suite.Execution.Timeout,
+			logger:  e.logger,
 		}
 		return runner.Run(ctx, item.task, item.trialIndex)
 	})

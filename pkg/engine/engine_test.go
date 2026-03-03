@@ -5,6 +5,7 @@ package engine
 
 import (
 	"context"
+	"log"
 	"testing"
 
 	"github.com/wallezhang/agent-eval/pkg/model"
@@ -72,7 +73,7 @@ func TestSchedulerConcurrency(t *testing.T) {
 		}
 	}
 
-	sched := newScheduler(3, 0)
+	sched := newScheduler(3, 0, log.Default())
 	results, err := sched.Run(context.Background(), items, func(ctx context.Context, item workItem) (*model.Trial, error) {
 		return &model.Trial{
 			TaskID: item.task.ID,

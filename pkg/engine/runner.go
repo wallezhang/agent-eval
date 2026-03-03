@@ -6,6 +6,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ type Runner struct {
 	agent   agent.Agent
 	graders []grader.Grader
 	timeout string
+	logger  *log.Logger
 }
 
 // Run executes one trial for the given task.
@@ -50,8 +52,10 @@ func (r *Runner) Run(ctx context.Context, task model.Task, trialIndex int) (*mod
 	})
 
 	// Execute the agent.
+	r.logger.Printf("  Task %q trial #%d: executing agent...", task.ID, trialIndex+1)
 	output, err := r.agent.Execute(ctx, task.Input)
 	if err != nil {
+		r.logger.Printf("  Task %q trial #%d: agent error: %v", task.ID, trialIndex+1, err)
 		trial.Status = model.TrialStatusError
 		trial.Error = err.Error()
 		trial.FinishedAt = time.Now()
@@ -70,6 +74,7 @@ func (r *Runner) Run(ctx context.Context, task model.Task, trialIndex int) (*mod
 	trial.Transcript = transcript
 
 	// Grade the output.
+	r.logger.Printf("  Task %q trial #%d: grading with %d grader(s)...", task.ID, trialIndex+1, len(r.graders))
 	grades, err := r.grade(ctx, task, *output, transcript)
 	if err != nil {
 		trial.Status = model.TrialStatusError

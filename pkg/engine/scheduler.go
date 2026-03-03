@@ -5,7 +5,9 @@ package engine
 
 import (
 	"context"
+	"log"
 	"sync"
+	"sync/atomic"
 
 	"github.com/wallezhang/agent-eval/pkg/model"
 	"golang.org/x/sync/errgroup"
@@ -19,22 +21,26 @@ type trialFunc func(ctx context.Context, item workItem) (*model.Trial, error)
 type scheduler struct {
 	concurrency int
 	rps         int
+	logger      *log.Logger
 }
 
-func newScheduler(concurrency, rps int) *scheduler {
+func newScheduler(concurrency, rps int, logger *log.Logger) *scheduler {
 	if concurrency <= 0 {
 		concurrency = 1
 	}
 	return &scheduler{
 		concurrency: concurrency,
 		rps:         rps,
+		logger:      logger,
 	}
 }
 
 // Run executes all work items concurrently, respecting concurrency and rate limits.
 func (s *scheduler) Run(ctx context.Context, items []workItem, fn trialFunc) ([]*model.Trial, error) {
-	results := make([]*model.Trial, len(items))
+	total := len(items)
+	results := make([]*model.Trial, total)
 	var mu sync.Mutex
+	var completed int64
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(s.concurrency)
@@ -67,6 +73,11 @@ func (s *scheduler) Run(ctx context.Context, items []workItem, fn trialFunc) ([]
 			mu.Lock()
 			results[i] = trial
 			mu.Unlock()
+
+			done := atomic.AddInt64(&completed, 1)
+			s.logger.Printf("[%d/%d] Task %q trial #%d: %s (score=%.2f, %dms)",
+				done, total, item.task.ID, item.trialIndex+1,
+				trial.Status, trial.Score, trial.DurationMS)
 
 			return nil
 		})
