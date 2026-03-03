@@ -1,23 +1,23 @@
 - id: capital-of-france
-  name: "法国首都"
+  name: "Capital of France"
   tags: [geography, factual]
   input:
-    prompt: "法国的首都是哪里？只回答城市名。"
+    prompt: "What is the capital of France? Answer with the city name only."
   expected:
-    text: "巴黎"
+    text: "Paris"
 
 - id: capital-of-japan
-  name: "日本首都"
+  name: "Capital of Japan"
   tags: [geography, factual]
   input:
-    prompt: "日本的首都是哪里？只回答城市名。"
+    prompt: "What is the capital of Japan? Answer with the city name only."
   expected:
-    text: "东京"
+    text: "Tokyo"
 
 - id: simple-math
-  name: "简单数学"
+  name: "Simple Math"
   tags: [math, factual]
   input:
-    prompt: "2 + 2 等于几？只回答数字。"
+    prompt: "What is 2 + 2? Answer with the number only."
   expected:
     text: "4"

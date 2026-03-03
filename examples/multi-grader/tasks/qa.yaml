@@ -1,0 +1,54 @@
+- id: water-formula
+  name: "Chemical Formula of Water"
+  tags: [chemistry, factual]
+  input:
+    prompt: "What is the chemical formula of water? Answer with the formula only."
+  expected:
+    text: "H2O"
+  trials_per_task: 2
+  graders:
+    - type: exact_match
+      weight: 0.6
+      config:
+        ignore_case: true
+        ignore_whitespace: true
+    - type: contains
+      weight: 0.4
+      config:
+        ignore_case: true
+        keywords: ["H2", "O"]
+
+- id: water-formula-partial
+  name: "Chemical Formula of Water (Partial Match)"
+  tags: [chemistry, partial]
+  input:
+    prompt: "Describe the chemical composition of water."
+  expected:
+    text: "H2O"
+  trials_per_task: 2
+  graders:
+    - type: exact_match
+      weight: 0.5
+      config:
+        ignore_case: true
+        ignore_whitespace: true
+    - type: contains
+      weight: 0.5
+      config:
+        ignore_case: true
+
+- id: boiling-point
+  name: "Boiling Point of Water"
+  tags: [physics, factual]
+  input:
+    prompt: "What is the boiling point of water in degrees Celsius? Answer with the number only."
+  expected:
+    text: "100"
+  trials_per_task: 2
+  graders:
+    - type: exact_match
+      weight: 0.7
+      config:
+        ignore_whitespace: true
+    - type: contains
+      weight: 0.3

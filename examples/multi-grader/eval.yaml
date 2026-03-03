@@ -1,0 +1,19 @@
+name: "multi-grader-eval"
+description: "Example showing tasks with expected field and multiple graders"
+
+agent:
+  type: command
+  config:
+    command: echo
+    args: ["H2O"]
+
+execution:
+  concurrency: 2
+  timeout: 30s
+
+task_files:
+  - tasks/*.yaml
+
+output:
+  format: all
+  dir: ./results

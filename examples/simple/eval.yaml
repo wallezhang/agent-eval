@@ -5,7 +5,7 @@ agent:
   type: command
   config:
     command: echo
-    args: ["巴黎"]
+    args: ["Paris"]
 
 defaults:
   trials_per_task: 3

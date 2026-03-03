@@ -1,5 +1,5 @@
 - id: fizzbuzz
-  name: "FizzBuzz 实现"
+  name: "FizzBuzz Implementation"
   tags: [coding, easy]
   input:
     prompt: |
@@ -20,7 +20,7 @@
         pattern: "def fizzbuzz\\s*\\(\\s*n\\s*\\)"
 
 - id: reverse-string
-  name: "字符串反转"
+  name: "Reverse String"
   tags: [coding, easy]
   input:
     prompt: |
