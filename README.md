@@ -1,16 +1,22 @@
 # agent-eval
 
-通用智能体评测框架。通过 YAML 配置驱动，支持多种 Agent 类型和评分策略，结果持久化到 SQLite，支持表格/JSON/HTML 报告输出。
+[![Go Reference](https://pkg.go.dev/badge/github.com/wallezhang/agent-eval.svg)](https://pkg.go.dev/github.com/wallezhang/agent-eval)
+[![Go Report Card](https://goreportcard.com/badge/github.com/wallezhang/agent-eval)](https://goreportcard.com/report/github.com/wallezhang/agent-eval)
+[![License](https://img.shields.io/github/license/wallezhang/agent-eval)](LICENSE)
 
-方法论参考 Anthropic [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)。
+A general-purpose AI agent evaluation framework. YAML-config-driven, supporting multiple agent types and grading strategies, with SQLite persistence and table/JSON/HTML report output.
 
-## 安装
+Methodology inspired by Anthropic's [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
+
+[中文文档](README_zh.md)
+
+## Installation
 
 ```bash
 go install github.com/wallezhang/agent-eval@latest
 ```
 
-或从源码构建：
+Or build from source:
 
 ```bash
 git clone https://github.com/wallezhang/agent-eval.git
@@ -18,26 +24,26 @@ cd agent-eval
 make build
 ```
 
-## 快速开始
+## Quick Start
 
-### 1. 初始化项目
+### 1. Initialize a Project
 
 ```bash
 agent-eval init my-eval
 cd my-eval
 ```
 
-生成如下结构：
+Generated structure:
 
 ```
 my-eval/
-├── eval.yaml          # 评测配置
+├── eval.yaml          # Evaluation config
 ├── tasks/
-│   └── sample.yaml    # 示例任务
-└── results/           # 报告输出目录
+│   └── sample.yaml    # Sample tasks
+└── results/           # Report output directory
 ```
 
-### 2. 编辑配置
+### 2. Edit Configuration
 
 `eval.yaml`:
 
@@ -76,30 +82,30 @@ output:
 
 ```yaml
 - id: capital-of-france
-  name: "法国首都"
+  name: "Capital of France"
   tags: [geography]
   input:
-    prompt: "法国的首都是哪里？只回答城市名。"
+    prompt: "What is the capital of France? Answer with just the city name."
   expected:
-    text: "巴黎"
+    text: "Paris"
 ```
 
-### 3. 运行评测
+### 3. Run Evaluation
 
 ```bash
 agent-eval run -c eval.yaml
 ```
 
-输出示例：
+Sample output:
 
 ```
 === Evaluation Report: my-eval ===
 Agent: openai | Run ID: a1b2c3d4
 Duration: 3250ms
 
-TASK      PASS  FAIL  ERR  AVG SCORE  PASS@K  PASS^K
-----      ----  ----  ---  ---------  ------  ------
-法国首都  3     0     0    1.000      1.000   1.000
+TASK              PASS  FAIL  ERR  AVG SCORE  PASS@K  PASS^K
+----              ----  ----  ---  ---------  ------  ------
+Capital of France 3     0     0    1.000      1.000   1.000
 
 --- Summary ---
 Tasks: 1 | Trials: 3 (passed: 3, failed: 0, error: 0)
@@ -107,14 +113,14 @@ Overall Pass Rate: 100.0% | Avg Score: 1.000
 Avg pass@k: 1.000 | Avg pass^k: 1.000
 ```
 
-## CLI 命令
+## CLI Commands
 
-| 命令 | 说明 |
-|------|------|
-| `agent-eval run -c <config>` | 执行评测套件 |
-| `agent-eval list [--db path]` | 列出历史运行记录 |
-| `agent-eval compare <runA> <runB>` | 对比两次运行结果 |
-| `agent-eval init [directory]` | 初始化评测项目脚手架 |
+| Command | Description |
+|---------|-------------|
+| `agent-eval run -c <config>` | Run an evaluation suite |
+| `agent-eval list [--db path]` | List historical runs |
+| `agent-eval compare <runA> <runB>` | Compare two runs |
+| `agent-eval init [directory]` | Initialize an evaluation project |
 
 ### run
 
@@ -122,9 +128,9 @@ Avg pass@k: 1.000 | Avg pass^k: 1.000
 agent-eval run -c eval.yaml [--db results/agent-eval.db] [--verbose]
 ```
 
-- `-c, --config` — 配置文件路径（默认 `eval.yaml`）
-- `--db` — SQLite 数据库路径（默认 `<output_dir>/agent-eval.db`）
-- `--verbose` — 输出详细日志
+- `-c, --config` — Config file path (default `eval.yaml`)
+- `--db` — SQLite database path (default `<output_dir>/agent-eval.db`)
+- `--verbose` — Enable verbose logging
 
 ### list
 
@@ -143,7 +149,7 @@ eefc2b36  simple-eval  command  3      33.3%      12ms      2026-02-27 23:31
 agent-eval compare eefc2b36 b3c4d5e6
 ```
 
-支持 ID 前缀匹配，输出逐任务的分数对比和回归/改进标注。
+Supports ID prefix matching. Outputs per-task score comparison with regression/improvement annotations.
 
 ### init
 
@@ -151,72 +157,72 @@ agent-eval compare eefc2b36 b3c4d5e6
 agent-eval init my-project
 ```
 
-在指定目录下生成 `eval.yaml` 和 `tasks/sample.yaml` 模板。
+Generates `eval.yaml` and `tasks/sample.yaml` templates in the specified directory.
 
-## 配置参考
+## Configuration Reference
 
-### YAML 配置完整结构
+### Full YAML Structure
 
 ```yaml
-name: "suite-name"                    # 必填，套件名称
-description: "..."                    # 可选，描述
+name: "suite-name"                    # Required, suite name
+description: "..."                    # Optional, description
 
-agent:                                # 必填，被测 Agent 配置
-  type: openai                        # Agent 类型
-  config:                             # 类型相关配置
+agent:                                # Required, agent under test
+  type: openai                        # Agent type
+  config:                             # Type-specific config
     model: gpt-4
-    api_key: ${OPENAI_API_KEY}        # 支持环境变量展开
+    api_key: ${OPENAI_API_KEY}        # Supports env var expansion
 
-defaults:                             # 可选，全局默认值
-  trials_per_task: 3                  # 每个任务重复次数（默认 1）
-  pass_threshold: 0.5                 # 通过阈值（默认 0.5）
-  graders:                            # 默认评分器
+defaults:                             # Optional, global defaults
+  trials_per_task: 3                  # Trials per task (default 1)
+  pass_threshold: 0.5                 # Pass threshold (default 0.5)
+  graders:                            # Default graders
     - type: exact_match
-      weight: 1.0                     # 权重（默认 1.0）
+      weight: 1.0                     # Weight (default 1.0)
       config: {}
 
-execution:                            # 可选，执行控制
-  concurrency: 4                      # 并发数（默认 1）
-  rate_limit_rps: 10                  # 每秒请求数限制（0=不限制）
-  timeout: 60s                        # 单次试验超时
+execution:                            # Optional, execution control
+  concurrency: 4                      # Concurrency (default 1)
+  rate_limit_rps: 10                  # Requests per second limit (0=unlimited)
+  timeout: 60s                        # Per-trial timeout
 
-task_files:                           # 可选，外部任务文件（支持 glob）
+task_files:                           # Optional, external task files (glob supported)
   - tasks/*.yaml
 
-tasks:                                # 可选，内联任务定义
+tasks:                                # Optional, inline task definitions
   - id: task-1
-    name: "任务名"
+    name: "Task name"
     tags: [tag1, tag2]
-    trials_per_task: 5                # 可覆盖默认值
+    trials_per_task: 5                # Can override default
     input:
       prompt: "..."
-      system: "..."                   # 可选，系统提示
-      messages:                       # 可选，多轮对话
+      system: "..."                   # Optional, system prompt
+      messages:                       # Optional, multi-turn conversation
         - role: user
           content: "..."
     expected:
-      text: "期望文本"
-      fields:                         # JSON 字段匹配
+      text: "Expected text"
+      fields:                         # JSON field matching
         name: "value"
-    graders:                          # 可覆盖默认评分器
+    graders:                          # Can override default graders
       - type: llm
         weight: 0.5
         config:
-          rubric: "评分标准"
+          rubric: "Grading criteria"
 
-output:                               # 可选，报告配置
+output:                               # Optional, report config
   format: all                         # table | json | html | all
-  dir: ./results                      # 输出目录
+  dir: ./results                      # Output directory
 ```
 
-### Agent 类型
+### Agent Types
 
-| 类型 | 说明 | 必填配置 |
-|------|------|----------|
+| Type | Description | Required Config |
+|------|-------------|-----------------|
 | `openai` | OpenAI Chat Completions API | `api_key` |
 | `anthropic` | Anthropic Messages API | `api_key` |
-| `http` | 通用 HTTP API | `url` |
-| `command` | 外部命令（通过 stdin/stdout 交互） | `command` |
+| `http` | Generic HTTP API | `url` |
+| `command` | External command (stdin/stdout) | `command` |
 
 **openai**
 
@@ -225,9 +231,9 @@ agent:
   type: openai
   config:
     api_key: ${OPENAI_API_KEY}
-    base_url: https://api.openai.com/v1   # 可选
-    model: gpt-4                           # 可选，默认 gpt-4
-    temperature: 0.0                       # 可选，默认 0.0
+    base_url: https://api.openai.com/v1   # Optional
+    model: gpt-4                           # Optional, default gpt-4
+    temperature: 0.0                       # Optional, default 0.0
 ```
 
 **anthropic**
@@ -237,8 +243,8 @@ agent:
   type: anthropic
   config:
     api_key: ${ANTHROPIC_API_KEY}
-    base_url: https://api.anthropic.com    # 可选
-    model: claude-sonnet-4-20250514       # 可选
+    base_url: https://api.anthropic.com    # Optional
+    model: claude-sonnet-4-20250514       # Optional
     temperature: 0.0
     max_tokens: 4096
 ```
@@ -250,10 +256,10 @@ agent:
   type: http
   config:
     url: http://localhost:8080/api/chat
-    method: POST                           # 可选，默认 POST
+    method: POST                           # Optional, default POST
     headers:
       Authorization: "Bearer ${TOKEN}"
-    response_path: text                    # 可选，JSON 响应中提取字段
+    response_path: text                    # Optional, extract field from JSON response
 ```
 
 **command**
@@ -264,13 +270,13 @@ agent:
   config:
     command: python
     args: ["-m", "my_agent"]
-    working_dir: /path/to/project      # 可选，命令执行的工作目录
+    working_dir: /path/to/project      # Optional, working directory for command execution
     timeout: 120s
     env:
       MODEL_PATH: /path/to/model
 ```
 
-任务的 `prompt` 默认通过 stdin 传入，stdout 作为 Agent 输出。如果 `args` 中包含 `{{.Prompt}}`，则 prompt 会替换到参数中，不再通过 stdin 传入：
+The task `prompt` is passed via stdin by default, with stdout as agent output. If `args` contains `{{.Prompt}}`, the prompt is substituted into the arguments instead of being passed via stdin:
 
 ```yaml
 agent:
@@ -280,17 +286,17 @@ agent:
     args: ["{{.Prompt}}"]
 ```
 
-### 评分器类型
+### Grader Types
 
-| 类型 | 说明 | 适用场景 |
-|------|------|----------|
-| `exact_match` | 精确字符串匹配 | 有明确答案的问答 |
-| `contains` | 包含关键字检查 | 半结构化输出 |
-| `regex` | 正则表达式匹配 | 格式化输出验证 |
-| `json_match` | JSON 字段值匹配 | API 响应验证 |
-| `command` | 外部命令评分 | 编码 Agent（单元测试） |
-| `llm` | LLM 评分 + rubric | 开放式输出评估 |
-| `pairwise` | A/B 成对比较 | 模型间对比 |
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `exact_match` | Exact string matching | Q&A with definite answers |
+| `contains` | Keyword presence check | Semi-structured output |
+| `regex` | Regular expression matching | Formatted output validation |
+| `json_match` | JSON field value matching | API response validation |
+| `command` | External command grading | Coding agents (unit tests) |
+| `llm` | LLM grading + rubric | Open-ended output evaluation |
+| `pairwise` | A/B pairwise comparison | Model comparison |
 
 **exact_match**
 
@@ -298,8 +304,8 @@ agent:
 graders:
   - type: exact_match
     config:
-      ignore_case: true        # 忽略大小写
-      ignore_whitespace: true  # 忽略首尾空白
+      ignore_case: true        # Case insensitive
+      ignore_whitespace: true  # Trim whitespace
 ```
 
 **contains**
@@ -309,7 +315,7 @@ graders:
   - type: contains
     config:
       ignore_case: true
-      keywords: ["关键词1", "关键词2"]  # 所有关键词都需匹配才算通过
+      keywords: ["keyword1", "keyword2"]  # All keywords must match to pass
 ```
 
 **regex**
@@ -328,7 +334,7 @@ graders:
   - type: json_match
     config:
       ignore_case: true
-# 需在任务的 expected.fields 中定义期望字段值
+# Expected field values should be defined in the task's expected.fields
 ```
 
 **command**
@@ -342,7 +348,7 @@ graders:
       timeout: 60s
 ```
 
-评分命令通过 stdin 接收 JSON（含 `task_id`、`agent_output`、`expected`），可以通过 stdout 返回 JSON（含 `score`、`pass`、`reason`），或直接以退出码 0/非零 表示通过/失败。
+The grading command receives JSON via stdin (containing `task_id`, `agent_output`, `expected`) and can return JSON via stdout (containing `score`, `pass`, `reason`), or simply use exit code 0/non-zero to indicate pass/fail.
 
 **llm**
 
@@ -355,9 +361,9 @@ graders:
       api_key: ${OPENAI_API_KEY}
       model: gpt-4
       rubric: |
-        评估标准：
-        1. 回答准确性
-        2. 表述简洁性
+        Evaluation criteria:
+        1. Answer accuracy
+        2. Conciseness
 ```
 
 **pairwise**
@@ -368,33 +374,33 @@ graders:
     config:
       provider: openai
       api_key: ${OPENAI_API_KEY}
-      criteria: "哪个回答更准确、更完整？"
-      reference: "参考答案文本"     # 可选，默认用 expected.text
+      criteria: "Which answer is more accurate and complete?"
+      reference: "Reference answer text"     # Optional, defaults to expected.text
 ```
 
-### 加权复合评分
+### Weighted Composite Scoring
 
-同一任务可配置多个评分器，通过 `weight` 设置权重：
+Multiple graders can be configured per task with `weight`:
 
 ```yaml
 graders:
   - type: exact_match
-    weight: 2.0                    # 权重 2.0
+    weight: 2.0                    # Weight 2.0
     config: { ignore_case: true }
   - type: llm
-    weight: 0.5                    # 权重 0.5
+    weight: 0.5                    # Weight 0.5
     config: { rubric: "..." }
 ```
 
-最终得分 = 加权平均。通过条件：所有评分器都通过。
+Final score = weighted average. Pass condition: all graders must pass.
 
-## 核心指标
+## Key Metrics
 
-框架实现了 Anthropic 文章中定义的两个关键指标：
+The framework implements two key metrics defined in the Anthropic article:
 
 ### pass@k
 
-至少 1 次通过的概率（乐观指标，衡量 Agent 的能力上限）：
+Probability of at least 1 pass (optimistic metric, measures agent capability ceiling):
 
 ```
 pass@k = 1 - C(n-c, k) / C(n, k)
@@ -402,74 +408,74 @@ pass@k = 1 - C(n-c, k) / C(n, k)
 
 ### pass^k
 
-全部 k 次都通过的概率（严格指标，衡量 Agent 的可靠性）：
+Probability of all k passes (strict metric, measures agent reliability):
 
 ```
 pass^k = C(c, k) / C(n, k)
 ```
 
-其中 `n` = 总试验数，`c` = 通过数，`k` = 采样数。
+Where `n` = total trials, `c` = pass count, `k` = sample size.
 
-## 报告格式
+## Report Formats
 
-### 表格（stdout）
+### Table (stdout)
 
-默认输出到终端，包含逐任务的 pass/fail/error 计数、平均分、pass@k、pass^k，以及失败详情。
+Default terminal output with per-task pass/fail/error counts, average score, pass@k, pass^k, and failure details.
 
 ### JSON
 
-完整的结构化数据，包含所有试验详情、评分结果和元数据，输出到 `results/<suite>-<id>.json`。
+Full structured data with all trial details, grading results, and metadata. Output to `results/<suite>-<id>.json`.
 
 ### HTML
 
-带样式的可视化报告，包含汇总卡片和详细表格，输出到 `results/<suite>-<id>.html`。
+Styled visual report with summary cards and detailed tables. Output to `results/<suite>-<id>.html`.
 
-## 项目结构
+## Project Structure
 
 ```
 agent-eval/
 ├── main.go
 ├── go.mod
 ├── Makefile
-├── cmd/                          # CLI 命令
+├── cmd/                          # CLI commands
 │   ├── root.go
 │   ├── run.go
 │   ├── list.go
 │   ├── compare.go
 │   └── init.go
 ├── pkg/
-│   ├── model/                    # 领域模型 + 指标计算
-│   ├── config/                   # YAML 配置加载与校验
-│   ├── agent/                    # Agent 接口与适配器
-│   ├── grader/                   # 评分器接口与实现
-│   ├── engine/                   # 评测执行引擎（并发调度）
-│   ├── storage/                  # 结果持久化（SQLite / 内存）
-│   ├── report/                   # 报告生成（表格 / JSON / HTML / Diff）
-│   └── llm/                      # LLM 客户端（供评分器使用）
+│   ├── model/                    # Domain models + metric computation
+│   ├── config/                   # YAML config loading & validation
+│   ├── agent/                    # Agent interface & adapters
+│   ├── grader/                   # Grader interface & implementations
+│   ├── engine/                   # Evaluation engine (concurrent scheduling)
+│   ├── storage/                  # Result persistence (SQLite / in-memory)
+│   ├── report/                   # Report generation (table / JSON / HTML / diff)
+│   └── llm/                      # LLM client (used by graders)
 ├── examples/
-│   ├── simple/                   # 命令 Agent 示例
-│   └── coding-agent/            # 编码 Agent 示例
+│   ├── simple/                   # Command agent example
+│   └── coding-agent/            # Coding agent example
 └── templates/
     └── report.html.tmpl
 ```
 
-## 扩展
+## Extending
 
-Agent 和 Grader 均通过工厂注册表扩展。在 `init()` 中注册即可：
+Agents and graders are extended via factory registries. Register in `init()`:
 
 ```go
-// 注册自定义 Agent
+// Register a custom agent
 agent.Register("my-agent", func(config map[string]any) (agent.Agent, error) {
     return &MyAgent{config: config}, nil
 })
 
-// 注册自定义 Grader
+// Register a custom grader
 grader.Register("my-grader", func(config map[string]any) (grader.Grader, error) {
     return &MyGrader{config: config}, nil
 })
 ```
 
-Agent 接口：
+Agent interface:
 
 ```go
 type Agent interface {
@@ -478,7 +484,7 @@ type Agent interface {
 }
 ```
 
-Grader 接口：
+Grader interface:
 
 ```go
 type Grader interface {
@@ -487,19 +493,19 @@ type Grader interface {
 }
 ```
 
-## 开发
+## Development
 
 ```bash
-make build        # 构建二进制
-make test         # 运行测试
-make vet          # 静态分析
-make lint         # golangci-lint（需安装）
-make clean        # 清理构建产物
+make build        # Build binary
+make test         # Run tests
+make vet          # Static analysis
+make lint         # golangci-lint (requires installation)
+make clean        # Clean build artifacts
 ```
 
-运行示例：
+Run examples:
 
 ```bash
 make run
-# 等同于: go run . run -c examples/simple/eval.yaml
+# Equivalent to: go run . run -c examples/simple/eval.yaml
 ```
