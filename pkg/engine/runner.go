@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,10 +18,12 @@ import (
 
 // Runner executes a single trial: calling the agent and grading the output.
 type Runner struct {
-	agent   agent.Agent
-	graders []grader.Grader
-	timeout string
-	logger  *log.Logger
+	agent      agent.Agent
+	graders    []grader.Grader
+	timeout    string
+	maxRetries int
+	retryDelay time.Duration
+	logger     *log.Logger
 }
 
 // Run executes one trial for the given task.
@@ -51,20 +54,64 @@ func (r *Runner) Run(ctx context.Context, task model.Task, trialIndex int) (*mod
 		Timestamp: time.Now(),
 	})
 
-	// Execute the agent.
+	// Execute the agent with retry logic.
 	r.logger.Printf("  Task %q trial #%d: executing agent...", task.ID, trialIndex+1)
-	output, err := r.agent.Execute(ctx, task.Input)
-	if err != nil {
-		r.logger.Printf("  Task %q trial #%d: agent error: %v", task.ID, trialIndex+1, err)
+
+	var output *model.AgentOutput
+	var agentErr error
+	retries := 0
+	agentStart := time.Now()
+
+	for attempt := 0; attempt <= r.maxRetries; attempt++ {
+		if attempt > 0 {
+			delay := r.retryDelay * time.Duration(math.Pow(2, float64(attempt-1)))
+			r.logger.Printf("  Task %q trial #%d: retrying (attempt %d/%d) after %v...",
+				task.ID, trialIndex+1, attempt, r.maxRetries, delay)
+			select {
+			case <-ctx.Done():
+				agentErr = ctx.Err()
+				break
+			case <-time.After(delay):
+			}
+			retries++
+		}
+
+		output, agentErr = r.agent.Execute(ctx, task.Input)
+		if agentErr == nil {
+			break
+		}
+	}
+
+	agentDuration := time.Since(agentStart)
+
+	if agentErr != nil {
+		r.logger.Printf("  Task %q trial #%d: agent error: %v", task.ID, trialIndex+1, agentErr)
 		trial.Status = model.TrialStatusError
-		trial.Error = err.Error()
+		trial.Error = agentErr.Error()
+		trial.AgentDurationMS = agentDuration.Milliseconds()
 		trial.FinishedAt = time.Now()
 		trial.DurationMS = trial.FinishedAt.Sub(trial.StartedAt).Milliseconds()
 		trial.Transcript = transcript
+		if retries > 0 {
+			if trial.AgentOutput == nil {
+				trial.AgentOutput = &model.AgentOutput{}
+			}
+			if trial.AgentOutput.Metadata == nil {
+				trial.AgentOutput.Metadata = make(map[string]any)
+			}
+			trial.AgentOutput.Metadata["retries"] = retries
+		}
 		return trial, nil
 	}
 
+	trial.AgentDurationMS = agentDuration.Milliseconds()
 	trial.AgentOutput = output
+	if retries > 0 {
+		if trial.AgentOutput.Metadata == nil {
+			trial.AgentOutput.Metadata = make(map[string]any)
+		}
+		trial.AgentOutput.Metadata["retries"] = retries
+	}
 	transcript.Steps = append(transcript.Steps, model.TranscriptStep{
 		Type:      "output",
 		Role:      "assistant",
@@ -92,6 +139,9 @@ func (r *Runner) Run(ctx context.Context, task model.Task, trialIndex int) (*mod
 	} else {
 		trial.Status = model.TrialStatusFailed
 	}
+
+	// Extract step count from agent metadata or transcript.
+	trial.StepCount = extractStepCount(output, transcript)
 
 	trial.FinishedAt = time.Now()
 	trial.DurationMS = trial.FinishedAt.Sub(trial.StartedAt).Milliseconds()
@@ -152,4 +202,41 @@ func computeWeightedScore(grades []model.GradeResult, refs []model.GraderRef) (f
 	}
 
 	return weightedScore / totalWeight, allPass
+}
+
+// extractStepCount extracts the step count from agent metadata or transcript.
+// Priority: metadata["step_count"] > metadata["steps"] > transcript step count.
+func extractStepCount(output *model.AgentOutput, transcript *model.Transcript) int {
+	if output != nil && output.Metadata != nil {
+		if v, ok := output.Metadata["step_count"]; ok {
+			if n, ok := toInt(v); ok {
+				return n
+			}
+		}
+		if v, ok := output.Metadata["steps"]; ok {
+			if n, ok := toInt(v); ok {
+				return n
+			}
+		}
+	}
+
+	// Fall back to transcript step count (excluding the initial input).
+	if transcript != nil && len(transcript.Steps) > 1 {
+		return len(transcript.Steps) - 1
+	}
+
+	return 0
+}
+
+func toInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case float64:
+		return int(n), true
+	default:
+		return 0, false
+	}
 }

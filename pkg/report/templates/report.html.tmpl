@@ -7,16 +7,18 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; padding: 2rem; }
-  .container { max-width: 1200px; margin: 0 auto; }
+  .container { max-width: 1400px; margin: 0 auto; }
   h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  h2 { margin-bottom: 1rem; }
   .meta { color: #666; font-size: 0.875rem; margin-bottom: 2rem; }
-  .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
   .card { background: #fff; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
   .card .label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
   .card .value { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
   .card .value.green { color: #16a34a; }
   .card .value.red { color: #dc2626; }
   .card .value.blue { color: #2563eb; }
+  .card .sub { font-size: 0.75rem; color: #888; margin-top: 0.25rem; }
   table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
   th { background: #f8fafc; text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: #666; border-bottom: 2px solid #e2e8f0; }
   td { padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; }
@@ -62,9 +64,22 @@
       <div class="label">Avg pass^k</div>
       <div class="value blue">{{score .Summary.AvgPassPowerK}}</div>
     </div>
+    {{if .Summary.Usage}}
+    <div class="card">
+      <div class="label">Total Tokens</div>
+      <div class="value">{{.Summary.Usage.TotalTokens}}</div>
+      <div class="sub">In: {{.Summary.Usage.TotalInputTokens}} | Out: {{.Summary.Usage.TotalOutputTokens}}</div>
+    </div>
+    {{if gt .Summary.Usage.EstimatedCostUSD 0.0}}
+    <div class="card">
+      <div class="label">Est. Cost</div>
+      <div class="value">${{cost .Summary.Usage.EstimatedCostUSD}}</div>
+    </div>
+    {{end}}
+    {{end}}
   </div>
 
-  <h2 style="margin-bottom:1rem;">Task Results</h2>
+  <h2>Task Results</h2>
   <table>
     <thead>
       <tr>
@@ -75,24 +90,38 @@
         <th>Avg Score</th>
         <th>pass@k</th>
         <th>pass^k</th>
+        <th>P50</th>
+        <th>P90</th>
+        <th>P99</th>
+        {{if hasUsage .TaskResults}}<th>Tokens</th><th>Cost</th>{{end}}
       </tr>
     </thead>
     <tbody>
+      {{$taskResults := .TaskResults}}
       {{range .TaskResults}}
       <tr>
-        <td><strong>{{if .Task.Name}}{{.Task.Name}}{{else}}{{.Task.ID}}{{end}}</strong><br><small style="color:#888">{{.Task.ID}}</small></td>
+        <td><strong>{{if .Task.Name}}{{.Task.Name}}{{else}}{{.Task.ID}}{{end}}</strong><br><small style="color:#888">{{.Task.ID}}</small>
+          {{if .Task.Tags}}<br>{{range .Task.Tags}}<span class="badge" style="background:#e2e8f0;color:#64748b;margin-right:2px">{{.}}</span>{{end}}{{end}}
+        </td>
         <td><span class="badge passed">{{.PassCount}}</span></td>
         <td>{{if gt .FailCount 0}}<span class="badge failed">{{.FailCount}}</span>{{else}}0{{end}}</td>
         <td>{{if gt .ErrorCount 0}}<span class="badge error">{{.ErrorCount}}</span>{{else}}0{{end}}</td>
         <td>{{score .AvgScore}}</td>
         <td>{{score .PassAtK}}</td>
         <td>{{score .PassPowerK}}</td>
+        <td>{{.LatencyP50MS}}ms</td>
+        <td>{{.LatencyP90MS}}ms</td>
+        <td>{{.LatencyP99MS}}ms</td>
+        {{if hasUsage $taskResults}}
+        <td>{{if .Usage}}{{.Usage.TotalTokens}}{{else}}-{{end}}</td>
+        <td>{{if .Usage}}{{if gt .Usage.EstimatedCostUSD 0.0}}${{cost .Usage.EstimatedCostUSD}}{{else}}-{{end}}{{else}}-{{end}}</td>
+        {{end}}
       </tr>
       {{end}}
     </tbody>
   </table>
 
-  <h2 style="margin-bottom:1rem;">Trial Details</h2>
+  <h2>Trial Details</h2>
   <table>
     <thead>
       <tr>
@@ -101,6 +130,8 @@
         <th>Status</th>
         <th>Score</th>
         <th>Duration</th>
+        <th>Agent Time</th>
+        <th>Steps</th>
         <th>Details</th>
       </tr>
     </thead>
@@ -113,6 +144,8 @@
         <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
         <td>{{score .Score}}</td>
         <td>{{.DurationMS}}ms</td>
+        <td>{{if gt .AgentDurationMS 0}}{{.AgentDurationMS}}ms{{else}}-{{end}}</td>
+        <td>{{if gt .StepCount 0}}{{.StepCount}}{{else}}-{{end}}</td>
         <td>
           {{if .Error}}<span style="color:#dc2626">{{.Error}}</span>{{end}}
           {{range .Grades}}

@@ -32,6 +32,9 @@ func (r *HTMLReporter) Generate(run *model.EvalRun, outputDir string) error {
 		"score": func(f float64) string {
 			return fmt.Sprintf("%.3f", f)
 		},
+		"cost": func(f float64) string {
+			return fmt.Sprintf("%.4f", f)
+		},
 		"shortID": func(s string) string {
 			if len(s) > 8 {
 				return s[:8]
@@ -49,6 +52,14 @@ func (r *HTMLReporter) Generate(run *model.EvalRun, outputDir string) error {
 			default:
 				return "pending"
 			}
+		},
+		"hasUsage": func(results []model.TaskResult) bool {
+			for _, r := range results {
+				if r.Usage != nil {
+					return true
+				}
+			}
+			return false
 		},
 	}
 

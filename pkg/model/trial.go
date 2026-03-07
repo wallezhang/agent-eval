@@ -18,19 +18,21 @@ const (
 
 // Trial represents a single execution of a task.
 type Trial struct {
-	ID          string        `json:"id"`
-	TaskID      string        `json:"task_id"`
-	Index       int           `json:"index"`
-	Status      TrialStatus   `json:"status"`
-	AgentOutput *AgentOutput  `json:"agent_output,omitempty"`
-	Transcript  *Transcript   `json:"transcript,omitempty"`
-	Grades      []GradeResult `json:"grades,omitempty"`
-	Score       float64       `json:"score"`
-	Pass        bool          `json:"pass"`
-	Error       string        `json:"error,omitempty"`
-	StartedAt   time.Time     `json:"started_at"`
-	FinishedAt  time.Time     `json:"finished_at"`
-	DurationMS  int64         `json:"duration_ms"`
+	ID              string        `json:"id"`
+	TaskID          string        `json:"task_id"`
+	Index           int           `json:"index"`
+	Status          TrialStatus   `json:"status"`
+	AgentOutput     *AgentOutput  `json:"agent_output,omitempty"`
+	Transcript      *Transcript   `json:"transcript,omitempty"`
+	Grades          []GradeResult `json:"grades,omitempty"`
+	Score           float64       `json:"score"`
+	Pass            bool          `json:"pass"`
+	Error           string        `json:"error,omitempty"`
+	StartedAt       time.Time     `json:"started_at"`
+	FinishedAt      time.Time     `json:"finished_at"`
+	DurationMS      int64         `json:"duration_ms"`
+	AgentDurationMS int64         `json:"agent_duration_ms,omitempty"`
+	StepCount       int           `json:"step_count,omitempty"`
 }
 
 // AgentOutput represents the output from an agent execution.

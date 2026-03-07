@@ -15,6 +15,8 @@ type Task struct {
 
 	// TrialsPerTask overrides the suite-level default if set.
 	TrialsPerTask int `json:"trials_per_task,omitempty" yaml:"trials_per_task,omitempty"`
+	// StepLimit is the maximum expected number of steps for efficiency scoring.
+	StepLimit int `json:"step_limit,omitempty" yaml:"step_limit,omitempty"`
 }
 
 // TaskInput defines the input to be sent to the agent.

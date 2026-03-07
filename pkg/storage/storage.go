@@ -22,3 +22,14 @@ type Store interface {
 	// Close releases any resources.
 	Close() error
 }
+
+// CheckpointStore extends Store with checkpoint support for resume capability.
+type CheckpointStore interface {
+	Store
+	// SaveCheckpoint persists a completed trial for checkpoint/resume.
+	SaveCheckpoint(ctx context.Context, runID string, trial *model.Trial) error
+	// LoadCheckpoint retrieves all checkpointed trials for a given run.
+	LoadCheckpoint(ctx context.Context, runID string) ([]*model.Trial, error)
+	// DeleteCheckpoint removes all checkpointed trials for a run.
+	DeleteCheckpoint(ctx context.Context, runID string) error
+}

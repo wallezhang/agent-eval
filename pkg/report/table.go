@@ -32,8 +32,8 @@ func (r *TableReporter) WriteTo(w io.Writer, run *model.EvalRun) error {
 
 	// Task results table.
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "TASK\tPASS\tFAIL\tERR\tAVG SCORE\tPASS@K\tPASS^K")
-	fmt.Fprintln(tw, "----\t----\t----\t---\t---------\t------\t------")
+	fmt.Fprintln(tw, "TASK\tPASS\tFAIL\tERR\tAVG SCORE\tPASS@K\tPASS^K\tP50ms\tP90ms\tP99ms")
+	fmt.Fprintln(tw, "----\t----\t----\t---\t---------\t------\t------\t-----\t-----\t-----")
 
 	for _, tr := range run.TaskResults {
 		name := tr.Task.Name
@@ -43,7 +43,7 @@ func (r *TableReporter) WriteTo(w io.Writer, run *model.EvalRun) error {
 		if len(name) > 30 {
 			name = name[:27] + "..."
 		}
-		fmt.Fprintf(tw, "%s\t%d\t%d\t%d\t%.3f\t%.3f\t%.3f\n",
+		fmt.Fprintf(tw, "%s\t%d\t%d\t%d\t%.3f\t%.3f\t%.3f\t%d\t%d\t%d\n",
 			name,
 			tr.PassCount,
 			tr.FailCount,
@@ -51,6 +51,9 @@ func (r *TableReporter) WriteTo(w io.Writer, run *model.EvalRun) error {
 			tr.AvgScore,
 			tr.PassAtK,
 			tr.PassPowerK,
+			tr.LatencyP50MS,
+			tr.LatencyP90MS,
+			tr.LatencyP99MS,
 		)
 	}
 	tw.Flush()
@@ -64,6 +67,16 @@ func (r *TableReporter) WriteTo(w io.Writer, run *model.EvalRun) error {
 		s.OverallPassRate*100, s.AvgScore)
 	fmt.Fprintf(w, "Avg pass@k: %.3f | Avg pass^k: %.3f\n",
 		s.AvgPassAtK, s.AvgPassPowerK)
+
+	// Token usage summary.
+	if s.Usage != nil {
+		fmt.Fprintf(w, "\n--- Token Usage ---\n")
+		fmt.Fprintf(w, "Input tokens: %d | Output tokens: %d | Total: %d\n",
+			s.Usage.TotalInputTokens, s.Usage.TotalOutputTokens, s.Usage.TotalTokens)
+		if s.Usage.EstimatedCostUSD > 0 {
+			fmt.Fprintf(w, "Estimated cost: $%.4f\n", s.Usage.EstimatedCostUSD)
+		}
+	}
 
 	// Per-task details (failures/errors).
 	hasIssues := false

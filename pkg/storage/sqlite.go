@@ -62,7 +62,15 @@ func (s *SQLiteStore) migrate() error {
 			started_at TEXT NOT NULL,
 			finished_at TEXT NOT NULL,
 			duration_ms INTEGER NOT NULL
-		)
+		);
+		CREATE TABLE IF NOT EXISTS checkpoints (
+			run_id TEXT NOT NULL,
+			task_id TEXT NOT NULL,
+			trial_index INTEGER NOT NULL,
+			trial_data TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			PRIMARY KEY (run_id, task_id, trial_index)
+		);
 	`)
 	return err
 }
@@ -149,6 +157,51 @@ func (s *SQLiteStore) DeleteRun(ctx context.Context, id string) error {
 
 func (s *SQLiteStore) Close() error {
 	return s.db.Close()
+}
+
+// SaveCheckpoint persists a completed trial for checkpoint/resume.
+func (s *SQLiteStore) SaveCheckpoint(ctx context.Context, runID string, trial *model.Trial) error {
+	trialJSON, err := json.Marshal(trial)
+	if err != nil {
+		return fmt.Errorf("marshaling trial: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, `
+		INSERT OR REPLACE INTO checkpoints (run_id, task_id, trial_index, trial_data, created_at)
+		VALUES (?, ?, ?, ?, ?)
+	`, runID, trial.TaskID, trial.Index, string(trialJSON), time.Now().Format(time.RFC3339))
+	return err
+}
+
+// LoadCheckpoint retrieves all checkpointed trials for a given run.
+func (s *SQLiteStore) LoadCheckpoint(ctx context.Context, runID string) ([]*model.Trial, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT trial_data FROM checkpoints WHERE run_id = ? ORDER BY task_id, trial_index
+	`, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trials []*model.Trial
+	for rows.Next() {
+		var trialJSON string
+		if err := rows.Scan(&trialJSON); err != nil {
+			return nil, err
+		}
+		var trial model.Trial
+		if err := json.Unmarshal([]byte(trialJSON), &trial); err != nil {
+			return nil, fmt.Errorf("unmarshaling trial: %w", err)
+		}
+		trials = append(trials, &trial)
+	}
+	return trials, rows.Err()
+}
+
+// DeleteCheckpoint removes all checkpointed trials for a run.
+func (s *SQLiteStore) DeleteCheckpoint(ctx context.Context, runID string) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM checkpoints WHERE run_id = ?", runID)
+	return err
 }
 
 type scanner interface {
