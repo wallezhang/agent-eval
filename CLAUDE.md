@@ -16,25 +16,45 @@ make license-check                  # Check all files have Apache-2.0 license he
 make license-fix                    # Add missing Apache-2.0 license headers
 ```
 
+## Conventions
+
+- All `.go` files must have the Apache-2.0 license header. Run `make license-check` to verify, `make license-fix` to add missing headers.
+- Error handling: agent/grading errors are recorded in the `Trial` struct (score=0), not propagated up. Runner always returns `(*Trial, nil)`.
+- Hook and cache failures are non-fatal — log a warning and continue.
+
 ## Architecture
 
 This is a YAML-config-driven CLI tool for evaluating AI agents. Module: `github.com/wallezhang/agent-eval`.
+
+### Package Overview
+
+| Package | Role |
+|---------|------|
+| `cmd/` | CLI commands (Cobra): run, list, compare, init |
+| `pkg/config/` | YAML loading, `${ENV}` expansion, glob task files, defaults cascade, validation |
+| `pkg/model/` | Domain types (EvalSuite, Task, Trial, GradeResult) + pass@k/pass^k computation |
+| `pkg/agent/` | Agent interface + adapters (openai, anthropic, http, command) |
+| `pkg/grader/` | Grader interface + implementations (exact_match, contains, regex, json_match, command, llm, pairwise, constraint) |
+| `pkg/engine/` | Orchestration: Engine, Scheduler (concurrent errgroup + rate limiter), Runner (per-trial execution with retry), Hooks |
+| `pkg/cache/` | File-based response caching, wraps Agent interface |
+| `pkg/storage/` | SQLite persistence (pure Go via `modernc.org/sqlite`, no CGO) + checkpoint store for resume |
+| `pkg/report/` | Report generation: table (stdout), JSON, HTML (embedded template via `//go:embed`), diff |
+| `pkg/llm/` | LLM client, used only by `llm` and `pairwise` graders (agents call APIs directly) |
 
 ### Execution Flow
 
 ```
 CLI (cmd/run.go)
-  → config.Load()          parse YAML, expand ${ENV_VARS}, glob-load task_files, apply defaults, validate
-  → engine.New(suite).Execute(ctx)
-      → agent.Create()     look up factory in registry by type name, instantiate
-      → resolveGraders()   same registry pattern for each task's grader refs
-      → buildWorkItems()   cartesian product: task × trials_per_task
-      → scheduler.Run()    errgroup with SetLimit(concurrency) + rate.Limiter(rps)
-          → runner.Run()   per work-item: agent.Execute → grader.Grade × N → weighted score
-      → aggregateResults() group trials by task, compute pass@k / pass^k
-  → store.SaveRun()        persist to SQLite
-  → report.GenerateAll()   table (stdout) + JSON file + HTML file
+  → config.Load()           → engine.New(suite).Execute(ctx)
+      → agent.Create()      → [cache.Wrap()]  → resolveGraders()
+      → [filterTasksByTags()] → buildWorkItems() → [loadCheckpoint()]
+      → [hooks.BeforeRun()]
+      → scheduler.Run()     → runner.Run() per work item
+      → [hooks.AfterRun()]  → aggregateResults()
+  → store.SaveRun()         → report.GenerateAll()
 ```
+
+Steps in `[]` are optional (enabled by config flags).
 
 ### Registry Pattern (agent + grader + llm)
 
@@ -44,26 +64,22 @@ All three extension points use the same pattern: a package-level `map[string]Fac
 - `grader.Create(typeName, config)` → `Grader` interface (`Grade` + `Type`)
 - `llm.Create(providerName, config)` → `Client` interface (`Complete` + `Close`)
 
-The `llm` package is only used by the `llm` and `pairwise` graders, not by agents (agents call APIs directly).
+### Adding a New Agent or Grader
 
-### Scoring Model
+1. Create a new file in `pkg/agent/` or `pkg/grader/` (e.g., `pkg/grader/my_grader.go`)
+2. Implement the interface (`Agent` or `Grader`)
+3. Add `func init() { Register("my_grader", newMyGrader) }` — the factory function receives `map[string]any` config
+4. No other files need modification — the registry pattern handles discovery
 
-A trial's final score is a **weighted average** across all grader results, but pass/fail is an **AND** — all graders must pass for the trial to pass. Individual grader errors don't abort the trial; they record score=0 and continue.
+### Key Invariants
 
-### Config Defaults Cascade
+These are non-obvious rules that must be preserved across changes:
 
-`EvalSuite.Defaults.Graders` and `TrialsPerTask` are applied to any task that doesn't override them. Grader weights default to 1.0. Config validation runs after defaults are applied.
-
-### Storage
-
-SQLite via `modernc.org/sqlite` (pure Go, no CGO). Task results and summary are stored as JSON text columns. The `compare` command supports ID prefix matching when looking up runs.
-
-### HTML Reports
-
-The template lives at `pkg/report/templates/report.html.tmpl` and is embedded via `//go:embed` in `pkg/report/html.go`. Custom template funcs: `pct`, `score`, `shortID`, `statusClass`.
-
-### Key Design Decisions
-
-- Runner returns `(*Trial, nil)` even on agent/grading errors — errors are recorded in the Trial struct, not propagated up. This keeps the scheduler simple.
-- The `command` agent passes task prompt via stdin; the `command` grader passes a JSON payload via stdin and parses structured JSON from stdout (falling back to exit code).
-- `pass@k` uses log-space arithmetic to avoid overflow with large n.
+- **Scoring**: A trial's final score is a weighted average across grader results, but pass/fail is an AND — all graders must pass for the trial to pass.
+- **Error propagation**: Runner returns `(*Trial, nil)` even on errors. Errors go into `Trial.Error`, keeping the scheduler simple.
+- **Retry scope**: Exponential backoff retries only agent execution errors, never grading failures.
+- **Config defaults**: `EvalSuite.Defaults.Graders` and `TrialsPerTask` are applied to tasks that don't override them. Validation runs after defaults are applied.
+- **Latency tracking**: `AgentDurationMS` measures agent execution time only (excludes grading). Latency percentiles use this field when available.
+- **Token extraction**: Usage data is extracted from `AgentOutput.Metadata["usage"]`, supporting both OpenAI field names (`input_tokens`/`output_tokens`) and Anthropic field names (`prompt_tokens`/`completion_tokens`).
+- **pass@k**: Uses log-space arithmetic to avoid overflow with large n.
+- **Stdin protocols**: `command` agent passes prompt via stdin. `command` grader passes JSON payload via stdin (`task_id`, `agent_output`, `expected`).
