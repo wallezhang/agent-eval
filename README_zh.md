@@ -432,6 +432,7 @@ graders:
     config:
       provider: openai           # openai | anthropic
       api_key: ${OPENAI_API_KEY}
+      base_url: https://api.openai.com/v1  # 可选，用于 OpenAI 兼容服务
       model: gpt-4
       rubric: |
         评估标准：
@@ -447,6 +448,7 @@ graders:
     config:
       provider: openai
       api_key: ${OPENAI_API_KEY}
+      base_url: https://api.openai.com/v1  # 可选，用于 OpenAI 兼容服务
       criteria: "哪个回答更准确、更完整？"
       reference: "参考答案文本"     # 可选，默认用 expected.text
 ```

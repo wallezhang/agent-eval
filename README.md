@@ -432,6 +432,7 @@ graders:
     config:
       provider: openai           # openai | anthropic
       api_key: ${OPENAI_API_KEY}
+      base_url: https://api.openai.com/v1  # Optional, for OpenAI-compatible services
       model: gpt-4
       rubric: |
         Evaluation criteria:
@@ -447,6 +448,7 @@ graders:
     config:
       provider: openai
       api_key: ${OPENAI_API_KEY}
+      base_url: https://api.openai.com/v1  # Optional, for OpenAI-compatible services
       criteria: "Which answer is more accurate and complete?"
       reference: "Reference answer text"     # Optional, defaults to expected.text
 ```

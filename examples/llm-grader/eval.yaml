@@ -1,0 +1,78 @@
+name: "llm-grader-eval"
+description: "Example using LLM as grader with OpenAI-compatible API"
+
+# This example demonstrates how to use the LLM grader to evaluate
+# open-ended agent responses using an OpenAI-compatible API.
+#
+# Required environment variables:
+#   OPENAI_API_KEY   - API key for the OpenAI-compatible service
+#
+# Optional environment variables:
+#   OPENAI_BASE_URL  - Custom API base URL (default: https://api.openai.com/v1)
+#
+# Usage:
+#   export OPENAI_API_KEY=sk-xxx
+#   agent-eval run -c examples/llm-grader/eval.yaml
+#
+#   # For OpenAI-compatible services (e.g. vLLM, Ollama, DeepSeek):
+#   export OPENAI_BASE_URL=http://localhost:8000/v1
+#   agent-eval run -c examples/llm-grader/eval.yaml
+
+agent:
+  type: openai
+  config:
+    model: gpt-4
+    api_key: ${OPENAI_API_KEY}
+    temperature: 0.7
+
+defaults:
+  trials_per_task: 2
+  pass_threshold: 0.6
+  graders:
+    - type: llm
+      config:
+        # LLM grader configuration - all available fields:
+        #
+        # provider  (optional, default: "openai")
+        #   LLM provider to use. Supported values: "openai", "anthropic".
+        #   Use "openai" for any OpenAI-compatible API (vLLM, Ollama, DeepSeek, etc.).
+        provider: openai
+        #
+        # api_key  (required)
+        #   API key for authentication. Sent as "Authorization: Bearer <api_key>" header.
+        api_key: ${OPENAI_API_KEY}
+        #
+        # base_url  (optional, default: "https://api.openai.com/v1")
+        #   Base URL for the API endpoint. The grader calls POST {base_url}/chat/completions.
+        #   Override this to point to any OpenAI-compatible service.
+        # base_url: ${OPENAI_BASE_URL}
+        #
+        # model  (optional, default: "gpt-4")
+        #   Model name to use for grading.
+        model: gpt-4
+        #
+        # rubric  (required)
+        #   Evaluation criteria for the LLM grader. The grader builds a prompt containing
+        #   the task input, expected output (if any), agent output, and this rubric, then
+        #   asks the LLM to respond with SCORE (0.0-1.0), PASS (true/false), and REASON.
+        rubric: |
+          Evaluate the response based on:
+          1. Correctness: Does the answer contain accurate information?
+          2. Relevance: Does the answer address the question directly?
+          3. Completeness: Does the answer cover the key points?
+
+          Score 0.8+ if the answer is accurate and relevant.
+          Score 0.5-0.8 if partially correct or missing key details.
+          Score below 0.5 if incorrect or irrelevant.
+
+execution:
+  concurrency: 2
+  rate_limit_rps: 5
+  timeout: 60s
+
+task_files:
+  - tasks/*.yaml
+
+output:
+  format: all
+  dir: ./results

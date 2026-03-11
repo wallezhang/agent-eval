@@ -1,0 +1,77 @@
+- id: explain-photosynthesis
+  name: "Explain Photosynthesis"
+  tags: [biology, explanation]
+  input:
+    prompt: "Explain how photosynthesis works in 2-3 sentences."
+  expected:
+    text: "Photosynthesis is the process by which plants convert sunlight, water, and carbon dioxide into glucose and oxygen."
+
+- id: explain-gravity
+  name: "Explain Gravity"
+  tags: [physics, explanation]
+  input:
+    prompt: "Explain Newton's law of universal gravitation in 2-3 sentences."
+  expected:
+    text: "Every object in the universe attracts every other object with a force proportional to the product of their masses and inversely proportional to the square of the distance between them."
+
+- id: creative-writing
+  name: "Creative Writing"
+  tags: [writing, creative]
+  input:
+    prompt: "Write a short haiku about the ocean."
+  # Task-level graders override the suite defaults.
+  # All LLM grader config fields (provider, api_key, base_url, model, rubric)
+  # can be specified per task.
+  graders:
+    - type: llm
+      config:
+        provider: openai
+        api_key: ${OPENAI_API_KEY}
+        # base_url: ${OPENAI_BASE_URL}
+        model: gpt-4
+        rubric: |
+          Evaluate this haiku based on:
+          1. Structure: Does it follow the 5-7-5 syllable pattern (or close to it)?
+          2. Theme: Is it about the ocean?
+          3. Quality: Is it evocative and poetic?
+
+          Score 0.8+ if it follows haiku structure and is about the ocean.
+          Score 0.5-0.8 if it's about the ocean but structure is off.
+          Score below 0.5 if it's not a haiku or not about the ocean.
+
+- id: summarization
+  name: "Text Summarization"
+  tags: [writing, summarization]
+  input:
+    prompt: |
+      Summarize the following text in one sentence:
+
+      The Internet of Things (IoT) refers to the network of physical devices,
+      vehicles, appliances, and other objects embedded with sensors, software,
+      and connectivity that enables them to collect and exchange data. IoT has
+      grown rapidly in recent years, with billions of devices now connected
+      worldwide. Applications range from smart homes and wearable fitness
+      trackers to industrial automation and smart city infrastructure.
+  expected:
+    text: "IoT is a network of connected physical devices with sensors and software that collect and exchange data, with applications spanning smart homes, wearables, and industrial automation."
+  graders:
+    - type: llm
+      config:
+        provider: openai
+        api_key: ${OPENAI_API_KEY}
+        # base_url: ${OPENAI_BASE_URL}
+        model: gpt-4
+        rubric: |
+          Evaluate this summary based on:
+          1. Accuracy: Does it capture the main points of the original text?
+          2. Conciseness: Is it a single sentence as requested?
+          3. Completeness: Does it mention IoT definition and its applications?
+
+          Score 0.8+ if accurate, concise, and complete.
+          Score 0.5-0.8 if partially accurate or not concise enough.
+          Score below 0.5 if it misses the main points.
+    - type: contains
+      weight: 0.3
+      config:
+        ignore_case: true
+        keywords: ["IoT", "device"]
