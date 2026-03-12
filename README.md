@@ -1,4 +1,4 @@
-# agent-eval
+# AgentEval
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/wallezhang/agent-eval.svg)](https://pkg.go.dev/github.com/wallezhang/agent-eval)
 [![Go Report Card](https://goreportcard.com/badge/github.com/wallezhang/agent-eval)](https://goreportcard.com/report/github.com/wallezhang/agent-eval)
@@ -26,6 +26,12 @@ Methodology inspired by Anthropic's [Demystifying Evals for AI Agents](https://w
 - **4 Report Formats** — Table (stdout), JSON, HTML, Diff comparison
 
 ## Installation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wallezhang/agent-eval/main/install.sh | bash
+```
+
+Or install with Go:
 
 ```bash
 go install github.com/wallezhang/agent-eval@latest

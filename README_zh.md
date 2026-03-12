@@ -1,4 +1,4 @@
-# agent-eval
+# AgentEval
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/wallezhang/agent-eval.svg)](https://pkg.go.dev/github.com/wallezhang/agent-eval)
 [![Go Report Card](https://goreportcard.com/badge/github.com/wallezhang/agent-eval)](https://goreportcard.com/report/github.com/wallezhang/agent-eval)
@@ -26,6 +26,12 @@
 - **4 种报告格式** — 表格（stdout）、JSON、HTML、Diff 对比
 
 ## 安装
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wallezhang/agent-eval/main/install.sh | bash
+```
+
+或使用 Go 安装：
 
 ```bash
 go install github.com/wallezhang/agent-eval@latest
