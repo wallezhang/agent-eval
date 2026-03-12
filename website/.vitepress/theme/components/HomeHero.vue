@@ -7,6 +7,8 @@ const { lang } = useData()
 const isVisible = ref(false)
 const terminalLines = ref([])
 const copied = ref(false)
+const isPlaying = ref(true)
+const animationDone = ref(false)
 
 const installCommand = 'curl -fsSL https://raw.githubusercontent.com/wallezhang/agent-eval/main/install.sh | bash'
 
@@ -34,21 +36,42 @@ const outputLines = [
   { text: 'Overall: 75.0% pass | P50: 1.2s | Tokens: 12,450', delay: 3000, class: 'summary' },
 ]
 
-onMounted(() => {
-  setTimeout(() => { isVisible.value = true }, 200)
+let timers = []
+
+const playAnimation = () => {
+  timers.forEach(clearTimeout)
+  timers = []
+  terminalLines.value = []
+  isPlaying.value = true
+  animationDone.value = false
 
   let currentLine = 0
   const showNextLine = () => {
     if (currentLine < outputLines.length) {
       const line = outputLines[currentLine]
-      setTimeout(() => {
+      const delay = currentLine === 0 ? 1500 : line.delay - (outputLines[currentLine - 1]?.delay || 0)
+      const timer = setTimeout(() => {
         terminalLines.value.push(line)
         currentLine++
         showNextLine()
-      }, currentLine === 0 ? 1500 : line.delay - (outputLines[currentLine - 1]?.delay || 0))
+      }, delay)
+      timers.push(timer)
+    } else {
+      isPlaying.value = false
+      animationDone.value = true
     }
   }
-  setTimeout(showNextLine, 2000)
+  const startTimer = setTimeout(showNextLine, 500)
+  timers.push(startTimer)
+}
+
+const replayAnimation = () => {
+  playAnimation()
+}
+
+onMounted(() => {
+  setTimeout(() => { isVisible.value = true }, 200)
+  setTimeout(playAnimation, 2000)
 })
 
 const isZh = () => lang.value?.startsWith('zh')
@@ -103,6 +126,9 @@ const isZh = () => lang.value?.startsWith('zh')
           <span></span><span></span><span></span>
         </div>
         <span class="terminal-title">Terminal</span>
+        <button v-if="animationDone" class="terminal-replay" @click="replayAnimation" :title="isZh() ? '重新播放' : 'Replay'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </button>
       </div>
       <div class="terminal-body">
         <div class="terminal-prompt">
@@ -126,13 +152,11 @@ const isZh = () => lang.value?.startsWith('zh')
 <style scoped>
 .hero-section {
   position: relative;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 24px 60px;
-  overflow: hidden;
+  padding: 120px 24px 0;
 }
 
 /* Background */
@@ -150,6 +174,8 @@ const isZh = () => lang.value?.startsWith('zh')
     linear-gradient(rgba(91, 108, 240, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(91, 108, 240, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
+  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
 }
 
 .hero-glow {
@@ -372,7 +398,7 @@ const isZh = () => lang.value?.startsWith('zh')
   overflow: hidden;
   background: #1a1b26;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   opacity: 0;
   transform: translateY(40px);
   transition: opacity 1s ease 0.3s, transform 1s ease 0.3s;
@@ -411,6 +437,25 @@ const isZh = () => lang.value?.startsWith('zh')
   font-size: 12px;
   color: rgba(255, 255, 255, 0.35);
   font-family: var(--vp-font-family-mono);
+  flex: 1;
+}
+
+.terminal-replay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.terminal-replay:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .terminal-body {
