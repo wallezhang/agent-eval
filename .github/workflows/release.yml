@@ -59,8 +59,56 @@ jobs:
           cd dist
           sha256sum * > checksums.txt
 
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREV_TAG}..HEAD"
+          fi
+
+          changelog=""
+          features=$(git log "$RANGE" --pretty=format:"%s" | grep -E "^feat(\(.+\))?:" | sed 's/^feat\([^)]*\): //' || true)
+          fixes=$(git log "$RANGE" --pretty=format:"%s" | grep -E "^fix(\(.+\))?:" | sed 's/^fix\([^)]*\): //' || true)
+          docs=$(git log "$RANGE" --pretty=format:"%s" | grep -E "^docs(\(.+\))?:" | sed 's/^docs\([^)]*\): //' || true)
+          others=$(git log "$RANGE" --pretty=format:"%s" | grep -vE "^(feat|fix|docs|style|refactor|test|chore|ci|build)(\(.+\))?:" || true)
+
+          if [ -n "$features" ]; then
+            changelog+=$'\n## 🚀 New Features\n'
+            while IFS= read -r line; do
+              changelog+="- ${line}"$'\n'
+            done <<< "$features"
+          fi
+
+          if [ -n "$fixes" ]; then
+            changelog+=$'\n## 🐛 Bug Fixes\n'
+            while IFS= read -r line; do
+              changelog+="- ${line}"$'\n'
+            done <<< "$fixes"
+          fi
+
+          if [ -n "$docs" ]; then
+            changelog+=$'\n## 📖 Documentation\n'
+            while IFS= read -r line; do
+              changelog+="- ${line}"$'\n'
+            done <<< "$docs"
+          fi
+
+          if [ -n "$others" ]; then
+            changelog+=$'\n## Other Changes\n'
+            while IFS= read -r line; do
+              changelog+="- ${line}"$'\n'
+            done <<< "$others"
+          fi
+
+          # Write to file for the release step
+          echo "$changelog" > /tmp/changelog.md
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: /tmp/changelog.md
           files: dist/*
