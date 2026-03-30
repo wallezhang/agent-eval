@@ -6,6 +6,7 @@ package grader
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/wallezhang/agent-eval/pkg/model"
 )
@@ -42,6 +43,16 @@ func Create(typeName string, config map[string]any) (Grader, error) {
 		return nil, fmt.Errorf("unknown grader type: %q (registered: %v)", typeName, registeredTypes())
 	}
 	return factory(config)
+}
+
+// Types returns all registered grader type names, sorted alphabetically.
+func Types() []string {
+	names := make([]string, 0, len(registry))
+	for name := range registry {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func registeredTypes() []string {

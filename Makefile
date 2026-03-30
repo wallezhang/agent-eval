@@ -1,11 +1,15 @@
-.PHONY: build test vet lint clean run license-check license-fix
+.PHONY: build build-web test vet lint clean run license-check license-fix
 
 BINARY := agent-eval
+WEB_BINARY := agent-eval-web
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 
 build:
 	go build $(LDFLAGS) -o $(BINARY) .
+
+build-web:
+	go build $(LDFLAGS) -o $(WEB_BINARY) ./web/cmd/
 
 test:
 	go test ./... -v
@@ -18,7 +22,7 @@ lint: vet
 	@which golangci-lint > /dev/null 2>&1 && golangci-lint run ./...
 
 clean:
-	rm -f $(BINARY)
+	rm -f $(BINARY) $(WEB_BINARY)
 	rm -rf results/
 
 run:
