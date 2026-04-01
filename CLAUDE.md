@@ -6,11 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 make build                          # Build binary with version injection
+make build-frontend                 # Build Vue 3 frontend (npm install + npm run build)
+make build-web                      # Build frontend + Go binary (full web build)
 make test                           # go test ./... -v
 make vet                            # go vet ./...
 make lint                           # go vet + golangci-lint
 go test ./pkg/model/ -v             # Run tests for a single package
 go test ./pkg/grader/ -run TestExactMatch -v  # Run a single test
+go test ./web/server/ -v            # Run web server tests
 make run                            # Run examples/simple/eval.yaml end-to-end
 make license-check                  # Check all files have Apache-2.0 license header
 make license-fix                    # Add missing Apache-2.0 license headers
@@ -30,7 +33,7 @@ This is a YAML-config-driven CLI tool for evaluating AI agents. Module: `github.
 
 | Package | Role |
 |---------|------|
-| `cmd/` | CLI commands (Cobra): run, list, compare, init |
+| `cmd/` | CLI commands (Cobra): run, list, compare, init, server |
 | `pkg/config/` | YAML loading, `${ENV}` expansion, glob task files, defaults cascade, validation |
 | `pkg/model/` | Domain types (EvalSuite, Task, Trial, GradeResult) + pass@k/pass^k computation |
 | `pkg/agent/` | Agent interface + adapters (openai, anthropic, http, command) |
@@ -40,6 +43,9 @@ This is a YAML-config-driven CLI tool for evaluating AI agents. Module: `github.
 | `pkg/storage/` | SQLite persistence (pure Go via `modernc.org/sqlite`, no CGO) + checkpoint store for resume |
 | `pkg/report/` | Report generation: table (stdout), JSON, HTML (embedded template via `//go:embed`), diff |
 | `pkg/llm/` | LLM client, used only by `llm` and `pairwise` graders (agents call APIs directly) |
+| `web/server/` | Web UI backend: Chi router, REST API handlers, SSE streaming, RunManager, Service layer |
+| `web/frontend/` | Web UI frontend: Vue 3 SPA (TypeScript, Naive UI, CodeMirror 6, Pinia) |
+| `web/embed.go` | `//go:embed` for embedding frontend dist into Go binary |
 
 ### Execution Flow
 
@@ -83,3 +89,25 @@ These are non-obvious rules that must be preserved across changes:
 - **Token extraction**: Usage data is extracted from `AgentOutput.Metadata["usage"]`, supporting both OpenAI field names (`input_tokens`/`output_tokens`) and Anthropic field names (`prompt_tokens`/`completion_tokens`).
 - **pass@k**: Uses log-space arithmetic to avoid overflow with large n.
 - **Stdin protocols**: `command` agent passes prompt via stdin. `command` grader passes JSON payload via stdin (`task_id`, `agent_output`, `expected`).
+
+### Web UI Architecture
+
+The `server` subcommand starts a web UI (single binary, frontend embedded via `go:embed`).
+
+**Backend** (`web/server/`):
+- Chi router with REST APIs scoped under `/api/projects/{name}/...`
+- `ProjectRegistry` manages `~/.agent-eval/projects.json` (multi-project support)
+- `Service` bridges HTTP handlers to `pkg/*` (config, engine, storage)
+- `RunManager` tracks concurrent evaluation runs, each with its own context and SSE event channel
+- SSE (`text/event-stream`) for real-time run progress
+- Static file serving with SPA fallback for client-side routing
+
+**Frontend** (`web/frontend/`):
+- Vue 3 + TypeScript + Vite, Naive UI components, Pinia state management
+- CodeMirror 6 for YAML config editing
+- Pages: Dashboard, Configurations (CRUD + editor), Runs (list + SSE detail), Results, Settings
+
+**Key patterns**:
+- Filename sanitization on all config CRUD endpoints (path traversal protection)
+- RunManager uses `sync.Once` + `done` channel to prevent send-on-closed-channel races
+- SQLite WAL mode supports concurrent writes from multiple active runs

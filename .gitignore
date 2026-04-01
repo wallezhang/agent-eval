@@ -57,5 +57,7 @@ build/
 # Log files
 *.log
 
+# Local directories (not version controlled)
 docs/
 .claude/
+.superpowers/

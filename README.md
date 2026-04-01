@@ -24,6 +24,7 @@ Methodology inspired by Anthropic's [Demystifying Evals for AI Agents](https://w
 - **Lifecycle Hooks** — Execute shell commands before/after runs, tasks, or trials for custom logic
 - **4 Agent Adapters** — OpenAI, Anthropic, HTTP, Command — plus a registry for custom agents
 - **4 Report Formats** — Table (stdout), JSON, HTML, Diff comparison
+- **Web UI** — Browser-based interface for managing projects, editing configs, running evaluations with real-time progress, and viewing results
 
 ## Installation
 
@@ -170,6 +171,7 @@ A `summary.json` file is always written alongside reports for machine consumptio
 | `agent-eval list [--db path]` | List historical runs |
 | `agent-eval compare <runA> <runB>` | Compare two runs |
 | `agent-eval init [directory]` | Initialize an evaluation project |
+| `agent-eval server [--port 8080]` | Start the web UI server |
 
 ### run
 
@@ -214,6 +216,26 @@ agent-eval init my-project
 ```
 
 Generates `eval.yaml` and `tasks/sample.yaml` templates in the specified directory.
+
+### server
+
+```bash
+agent-eval server [flags]
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-p, --port` | Server listen port | `8080` |
+| `--home` | Agent-eval home directory for project registry | `~/.agent-eval` |
+
+Starts the web UI server. Open `http://localhost:8080` in a browser to manage projects, edit configs, run evaluations with real-time progress, and view results.
+
+**Features:**
+- Multi-project management — register multiple agent-eval project directories
+- YAML config editor with syntax highlighting (CodeMirror 6) and live validation
+- Run evaluations from the browser with real-time SSE progress streaming
+- View detailed results: pass rates, scores, latency percentiles, per-trial grade breakdowns
+- Single binary — frontend is embedded via `go:embed`
 
 ## Configuration Reference
 
@@ -593,7 +615,8 @@ agent-eval/
 │   ├── run.go
 │   ├── list.go
 │   ├── compare.go
-│   └── init.go
+│   ├── init.go
+│   └── server.go                # Web UI server command
 ├── pkg/
 │   ├── model/                    # Domain models + metric computation
 │   ├── config/                   # YAML config loading & validation
@@ -604,6 +627,10 @@ agent-eval/
 │   ├── storage/                  # Result persistence (SQLite / in-memory)
 │   ├── report/                   # Report generation (table / JSON / HTML / diff)
 │   └── llm/                      # LLM client (used by graders)
+├── web/
+│   ├── embed.go                  # //go:embed frontend/dist
+│   ├── server/                   # Web backend (Chi router, handlers, SSE)
+│   └── frontend/                 # Vue 3 SPA (TypeScript, Naive UI)
 ├── examples/
 │   ├── simple/                   # Command agent example
 │   ├── multi-grader/             # Multi-grader example
@@ -650,6 +677,7 @@ type Grader interface {
 
 ```bash
 make build        # Build binary
+make build-web    # Build frontend + binary (full web build)
 make test         # Run tests
 make vet          # Static analysis
 make lint         # golangci-lint (requires installation)

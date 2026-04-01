@@ -24,6 +24,7 @@
 - **生命周期 Hooks** — 在运行/任务/试验的前后执行自定义 Shell 命令
 - **4 种 Agent 适配器** — OpenAI、Anthropic、HTTP、Command — 加上扩展注册表支持自定义 Agent
 - **4 种报告格式** — 表格（stdout）、JSON、HTML、Diff 对比
+- **Web UI** — 浏览器界面，支持项目管理、配置编辑、实时进度的评测运行和结果查看
 
 ## 安装
 
@@ -170,6 +171,7 @@ agent-eval run -c eval.yaml --resume <run-id>
 | `agent-eval list [--db path]` | 列出历史运行记录 |
 | `agent-eval compare <runA> <runB>` | 对比两次运行结果 |
 | `agent-eval init [directory]` | 初始化评测项目脚手架 |
+| `agent-eval server [--port 8080]` | 启动 Web UI 服务 |
 
 ### run
 
@@ -214,6 +216,26 @@ agent-eval init my-project
 ```
 
 在指定目录下生成 `eval.yaml` 和 `tasks/sample.yaml` 模板。
+
+### server
+
+```bash
+agent-eval server [flags]
+```
+
+| 标志 | 说明 | 默认值 |
+|------|------|--------|
+| `-p, --port` | 服务监听端口 | `8080` |
+| `--home` | agent-eval 主目录，用于项目注册表 | `~/.agent-eval` |
+
+启动 Web UI 服务。在浏览器中打开 `http://localhost:8080` 即可管理项目、编辑配置、运行评测（实时进度）和查看结果。
+
+**功能：**
+- 多项目管理 — 注册多个 agent-eval 项目目录
+- YAML 配置编辑器，支持语法高亮（CodeMirror 6）和实时校验
+- 从浏览器启动评测，支持 SSE 实时进度推送
+- 查看详细结果：通过率、分数、延迟分位数、逐试验评分明细
+- 单一二进制 — 前端通过 `go:embed` 嵌入
 
 ## 配置参考
 
@@ -593,7 +615,8 @@ agent-eval/
 │   ├── run.go
 │   ├── list.go
 │   ├── compare.go
-│   └── init.go
+│   ├── init.go
+│   └── server.go                # Web UI 服务命令
 ├── pkg/
 │   ├── model/                    # 领域模型 + 指标计算
 │   ├── config/                   # YAML 配置加载与校验
@@ -604,6 +627,10 @@ agent-eval/
 │   ├── storage/                  # 结果持久化（SQLite / 内存）
 │   ├── report/                   # 报告生成（表格 / JSON / HTML / Diff）
 │   └── llm/                      # LLM 客户端（供评分器使用）
+├── web/
+│   ├── embed.go                  # //go:embed frontend/dist
+│   ├── server/                   # Web 后端（Chi 路由、API、SSE）
+│   └── frontend/                 # Vue 3 SPA（TypeScript、Naive UI）
 ├── examples/
 │   ├── simple/                   # 命令 Agent 示例
 │   ├── multi-grader/             # 多评分器示例
@@ -650,6 +677,7 @@ type Grader interface {
 
 ```bash
 make build        # 构建二进制
+make build-web    # 构建前端 + 二进制（完整 Web 构建）
 make test         # 运行测试
 make vet          # 静态分析
 make lint         # golangci-lint（需安装）

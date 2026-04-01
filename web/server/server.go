@@ -5,12 +5,14 @@ package server
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/wallezhang/agent-eval/web"
 )
 
 // Server is the web UI backend server.
@@ -81,6 +83,27 @@ func (s *Server) buildRouter() {
 	// Metadata
 	r.Get("/api/agents", s.handleListAgentTypes)
 	r.Get("/api/graders", s.handleListGraderTypes)
+
+	// Serve embedded frontend (SPA fallback)
+	frontendFS, err := fs.Sub(web.FrontendFS, "frontend/dist")
+	if err == nil {
+		fileServer := http.FileServer(http.FS(frontendFS))
+		r.NotFound(func(w http.ResponseWriter, req *http.Request) {
+			// Try to serve static file first
+			path := req.URL.Path
+			if len(path) > 0 && path[0] == '/' {
+				path = path[1:]
+			}
+			_, err := fs.Stat(frontendFS, path)
+			if err == nil {
+				fileServer.ServeHTTP(w, req)
+				return
+			}
+			// SPA fallback: serve index.html for client-side routing
+			req.URL.Path = "/"
+			fileServer.ServeHTTP(w, req)
+		})
+	}
 }
 
 // ServeHTTP implements the http.Handler interface.
