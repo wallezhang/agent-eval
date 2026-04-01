@@ -40,7 +40,7 @@ function handleMenuUpdate(key: string) {
       />
     </NLayoutSider>
     <NLayoutContent style="padding: 24px; overflow-y: auto">
-      <slot />
+      <router-view />
     </NLayoutContent>
   </NLayout>
 </template>

@@ -26,54 +26,68 @@ const sseUrl = computed(() =>
   currentProjectName.value ? getRunSSEUrl(currentProjectName.value, props.id) : '',
 )
 
-const { events, connect } = useSSE(sseUrl.value)
+const sse = useSSE(sseUrl.value)
 
-watch(events, (evts) => {
-  for (const evt of evts) {
-    switch (evt.type) {
-      case 'run_started': {
-        const d = evt.data as SSERunStarted
-        suiteName.value = d.suite
-        progress.value.total = d.total_tasks
-        logs.value.push(`Run started: ${d.suite} (${d.total_tasks} tasks)`)
-        break
-      }
-      case 'trial_completed': {
-        const d = evt.data as SSETrialCompleted
-        logs.value.push(`Trial ${d.task_id}#${d.trial_index}: ${d.status} (score: ${d.score}, ${d.duration_ms}ms)`)
-        break
-      }
-      case 'run_progress': {
-        const d = evt.data as SSERunProgress
-        progress.value = { ...d }
-        break
-      }
-      case 'run_completed': {
-        const d = evt.data as SSERunCompleted
-        isRunning.value = false
-        logs.value.push(`Run completed: ${d.run_id.slice(0, 8)}`)
-        message.success('Run completed')
-        break
-      }
-      case 'run_error': {
-        const d = evt.data as SSERunError
-        isRunning.value = false
-        errorMsg.value = d.message
-        logs.value.push(`Error: ${d.message}`)
-        break
-      }
-      case 'log': {
-        const d = evt.data as { message: string }
-        logs.value.push(d.message)
-        break
-      }
+// Process SSE events without infinite loop
+// Watch the array length instead of deep-watching the array itself
+let lastProcessedIndex = 0
+watch(
+  () => sse.events.value.length,
+  (newLen) => {
+    if (newLen <= lastProcessedIndex) return
+    const newEvents = sse.events.value.slice(lastProcessedIndex)
+    lastProcessedIndex = newLen
+    for (const evt of newEvents) {
+      handleSSEEvent(evt)
+    }
+  },
+)
+
+function handleSSEEvent(evt: { type: string; data: unknown }) {
+  switch (evt.type) {
+    case 'run_started': {
+      const d = evt.data as SSERunStarted
+      suiteName.value = d.suite
+      progress.value.total = d.total_tasks
+      logs.value.push(`Run started: ${d.suite} (${d.total_tasks} tasks)`)
+      break
+    }
+    case 'trial_completed': {
+      const d = evt.data as SSETrialCompleted
+      logs.value.push(`Trial ${d.task_id}#${d.trial_index}: ${d.status} (score: ${d.score}, ${d.duration_ms}ms)`)
+      break
+    }
+    case 'run_progress': {
+      const d = evt.data as SSERunProgress
+      progress.value = { ...d }
+      break
+    }
+    case 'run_completed': {
+      const d = evt.data as SSERunCompleted
+      isRunning.value = false
+      logs.value.push(`Run completed: ${d.run_id.slice(0, 8)}`)
+      message.success('Run completed')
+      break
+    }
+    case 'run_error': {
+      const d = evt.data as SSERunError
+      isRunning.value = false
+      errorMsg.value = d.message
+      logs.value.push(`Error: ${d.message}`)
+      break
+    }
+    case 'log': {
+      const d = evt.data as { message: string }
+      logs.value.push(d.message)
+      break
     }
   }
-  events.value = []
-}, { deep: true })
+}
 
 onMounted(() => {
-  if (sseUrl.value) connect()
+  if (sseUrl.value) {
+    sse.connect()
+  }
 })
 
 async function handleCancel() {

@@ -17,13 +17,7 @@ export const router = createRouter({
         {
           path: 'configs',
           name: 'configs',
-          component: () => import('@/views/ConfigListView.vue'),
-        },
-        {
-          path: 'configs/:filename',
-          name: 'config-edit',
-          component: () => import('@/views/ConfigEditView.vue'),
-          props: true,
+          component: () => import('@/views/ConfigsView.vue'),
         },
         {
           path: 'runs',

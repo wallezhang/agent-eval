@@ -64,12 +64,15 @@ func (s *Server) buildRouter() {
 	// Per-project routes
 	r.Route("/api/projects/{name}", func(r chi.Router) {
 		r.Delete("/", s.handleDeleteProject)
+		r.Get("/info", s.handleGetProjectInfo)
+		r.Get("/files", s.handleListFileTree)
+		r.Post("/dirs", s.handleCreateDir)
 		r.Get("/configs", s.handleListConfigs)
 		r.Post("/configs", s.handleCreateConfig)
-		r.Get("/configs/{filename}", s.handleGetConfig)
-		r.Put("/configs/{filename}", s.handleUpdateConfig)
-		r.Delete("/configs/{filename}", s.handleDeleteConfig)
-		r.Post("/configs/{filename}/validate", s.handleValidateConfig)
+		r.Post("/configs/validate", s.handleValidateConfig)
+		r.Get("/configs/*", s.handleGetConfig)
+		r.Put("/configs/*", s.handleUpdateConfig)
+		r.Delete("/configs/*", s.handleDeleteConfig)
 
 		r.Post("/runs", s.handleStartRun)
 		r.Get("/runs", s.handleListRuns)

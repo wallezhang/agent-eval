@@ -184,7 +184,9 @@ func TestHandlerDeleteConfig(t *testing.T) {
 func TestHandlerValidateConfig(t *testing.T) {
 	s, _ := newTestServerWithProject(t)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/projects/proj/configs/eval.yaml/validate", nil)
+	body := `{"filename":"eval.yaml"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/projects/proj/configs/validate", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	s.router.ServeHTTP(w, req)
 
@@ -204,15 +206,17 @@ func TestHandlerValidateConfig(t *testing.T) {
 func TestHandlerValidateConfigInvalid(t *testing.T) {
 	s, projectDir := newTestServerWithProject(t)
 
-	// Write an invalid config
+	// Overwrite eval.yaml with invalid content (missing agent and tasks)
 	invalidYAML := `name: bad-suite
 # missing agent and tasks
 `
-	if err := os.WriteFile(filepath.Join(projectDir, "bad.yaml"), []byte(invalidYAML), 0o644); err != nil {
-		t.Fatalf("writing bad.yaml: %v", err)
+	if err := os.WriteFile(filepath.Join(projectDir, "eval.yaml"), []byte(invalidYAML), 0o644); err != nil {
+		t.Fatalf("writing eval.yaml: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/projects/proj/configs/bad.yaml/validate", nil)
+	body := `{"filename":"eval.yaml"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/projects/proj/configs/validate", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	s.router.ServeHTTP(w, req)
 

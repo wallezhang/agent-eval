@@ -1,15 +1,29 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, watch } from 'vue'
 import { NSpace, NText, NCard, NDescriptions, NDescriptionsItem } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 import { storeToRefs } from 'pinia'
+import { getProjectInfo } from '@/api/projects'
+import type { ProjectInfo } from '@/api/projects'
 
 const projectStore = useProjectStore()
-const { currentProject } = storeToRefs(projectStore)
+const { currentProjectName } = storeToRefs(projectStore)
 
-const dbPath = computed(() =>
-  currentProject.value ? `${currentProject.value.path}/agent-eval.db` : 'N/A',
-)
+const info = ref<ProjectInfo | null>(null)
+
+async function loadInfo() {
+  if (!currentProjectName.value) {
+    info.value = null
+    return
+  }
+  try {
+    info.value = await getProjectInfo(currentProjectName.value)
+  } catch {
+    info.value = null
+  }
+}
+
+watch(currentProjectName, loadInfo, { immediate: true })
 </script>
 
 <template>
@@ -17,9 +31,9 @@ const dbPath = computed(() =>
     <NText tag="h1" style="margin: 0">Settings</NText>
     <NCard title="Project Information" size="small">
       <NDescriptions label-placement="left" :column="1" bordered>
-        <NDescriptionsItem label="Project Name">{{ currentProject?.name || 'None selected' }}</NDescriptionsItem>
-        <NDescriptionsItem label="Project Path">{{ currentProject?.path || 'N/A' }}</NDescriptionsItem>
-        <NDescriptionsItem label="Database Path">{{ dbPath }}</NDescriptionsItem>
+        <NDescriptionsItem label="Project Name">{{ info?.name || 'None selected' }}</NDescriptionsItem>
+        <NDescriptionsItem label="Project Path">{{ info?.path || 'N/A' }}</NDescriptionsItem>
+        <NDescriptionsItem label="Database Path">{{ info?.db_path || 'N/A' }}</NDescriptionsItem>
       </NDescriptions>
     </NCard>
   </NSpace>

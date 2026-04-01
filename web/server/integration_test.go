@@ -115,7 +115,9 @@ tasks:
 	}
 
 	// 6. Validate config
-	req = httptest.NewRequest(http.MethodPost, "/api/projects/integration/configs/test.yaml/validate", nil)
+	validateBody := `{"filename":"test.yaml"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/projects/integration/configs/validate", strings.NewReader(validateBody))
+	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 	assertStatus(t, w, http.StatusOK)

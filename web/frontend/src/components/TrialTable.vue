@@ -38,10 +38,38 @@ defineProps<{
           <NText type="error">Error: {{ trial.error }}</NText>
         </template>
 
-        <template v-if="trial.agent_output?.text">
+        <template v-if="trial.agent_output">
           <NText strong>Agent Output:</NText>
-          <div style="background: #f5f5f5; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
+          <!-- Text output -->
+          <div
+            v-if="trial.agent_output.text"
+            style="background: #f5f5f5; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;"
+          >
             {{ trial.agent_output.text }}
+          </div>
+          <NText v-else depth="3" italic>(empty)</NText>
+          <!-- Metadata (stderr, exit_code, etc.) -->
+          <template v-if="trial.agent_output.metadata && Object.keys(trial.agent_output.metadata).length > 0">
+            <NText strong style="margin-top: 4px">Metadata:</NText>
+            <div
+              style="background: #f5f5f5; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 150px; overflow-y: auto;"
+            >
+              <div v-for="(val, key) in trial.agent_output.metadata" :key="String(key)">
+                <NText code>{{ key }}</NText>: {{ typeof val === 'object' ? JSON.stringify(val) : val }}
+              </div>
+            </div>
+          </template>
+        </template>
+
+        <!-- Transcript -->
+        <template v-if="trial.transcript?.steps?.length">
+          <NText strong>Transcript:</NText>
+          <div
+            style="background: #f5f5f5; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;"
+          >
+            <div v-for="(step, si) in trial.transcript.steps" :key="si" style="margin-bottom: 4px;">
+              <NText code>{{ step.role || step.type }}</NText>: {{ step.content.length > 500 ? step.content.slice(0, 500) + '...' : step.content }}
+            </div>
           </div>
         </template>
       </NSpace>

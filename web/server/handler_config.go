@@ -12,6 +12,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// extractFilename gets the config filename from the wildcard URL path.
+// For routes like /configs/*, chi stores the wildcard part in "*".
+// e.g. /configs/tasks/sample.yaml → "tasks/sample.yaml"
+func extractFilename(r *http.Request) string {
+	filename := chi.URLParam(r, "*")
+	// Strip leading slash if present
+	return strings.TrimPrefix(filename, "/")
+}
+
 type createConfigRequest struct {
 	Filename string `json:"filename"`
 	Content  string `json:"content"`
@@ -19,6 +28,56 @@ type createConfigRequest struct {
 
 type updateConfigRequest struct {
 	Content string `json:"content"`
+}
+
+type createDirRequest struct {
+	Path string `json:"path"`
+}
+
+func (s *Server) handleListFileTree(w http.ResponseWriter, r *http.Request) {
+	projectName := chi.URLParam(r, "name")
+
+	tree, err := s.service.ListFileTree(projectName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if tree == nil {
+		tree = []FileNode{}
+	}
+	writeJSON(w, http.StatusOK, tree)
+}
+
+func (s *Server) handleCreateDir(w http.ResponseWriter, r *http.Request) {
+	projectName := chi.URLParam(r, "name")
+
+	var req createDirRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	req.Path = strings.TrimSpace(req.Path)
+	if req.Path == "" {
+		writeError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+
+	if err := s.service.CreateDir(projectName, req.Path); err != nil {
+		if strings.Contains(err.Error(), "invalid filename") {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (s *Server) handleListConfigs(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +102,7 @@ func (s *Server) handleListConfigs(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	projectName := chi.URLParam(r, "name")
-	filename := chi.URLParam(r, "filename")
+	filename := extractFilename(r)
 
 	data, err := s.service.GetConfig(projectName, filename)
 	if err != nil {
@@ -93,7 +152,7 @@ func (s *Server) handleCreateConfig(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	projectName := chi.URLParam(r, "name")
-	filename := chi.URLParam(r, "filename")
+	filename := extractFilename(r)
 
 	var req updateConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -115,7 +174,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleDeleteConfig(w http.ResponseWriter, r *http.Request) {
 	projectName := chi.URLParam(r, "name")
-	filename := chi.URLParam(r, "filename")
+	filename := extractFilename(r)
 
 	if err := s.service.DeleteConfig(projectName, filename); err != nil {
 		if os.IsNotExist(err) || strings.Contains(err.Error(), "no such file") {
@@ -135,7 +194,21 @@ func (s *Server) handleDeleteConfig(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleValidateConfig(w http.ResponseWriter, r *http.Request) {
 	projectName := chi.URLParam(r, "name")
-	filename := chi.URLParam(r, "filename")
+
+	// Accept filename from query param or JSON body
+	filename := r.URL.Query().Get("filename")
+	if filename == "" {
+		var body struct {
+			Filename string `json:"filename"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil && body.Filename != "" {
+			filename = body.Filename
+		}
+	}
+	if filename == "" {
+		writeError(w, http.StatusBadRequest, "filename is required (query param or JSON body)")
+		return
+	}
 
 	errors := s.service.ValidateConfig(projectName, filename)
 

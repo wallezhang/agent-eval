@@ -150,15 +150,37 @@ func TestService_ValidateConfigInvalid(t *testing.T) {
 	svc, _ := setupTestProject(t)
 	defer svc.Close()
 
-	// Save an invalid config.
-	err := svc.SaveConfig("test-project", "invalid.yaml", []byte("name: invalid\n"))
+	// eval.yaml with missing required fields → full validation fails
+	err := svc.SaveConfig("test-project", "eval.yaml", []byte("name: invalid\n"))
 	if err != nil {
 		t.Fatalf("SaveConfig: %v", err)
 	}
 
-	errs := svc.ValidateConfig("test-project", "invalid.yaml")
+	errs := svc.ValidateConfig("test-project", "eval.yaml")
 	if len(errs) == 0 {
-		t.Error("expected validation errors for invalid config")
+		t.Error("expected validation errors for invalid eval.yaml")
+	}
+
+	// Non-eval file with bad YAML syntax → syntax check fails
+	err = svc.SaveConfig("test-project", "bad-syntax.yaml", []byte("  bad:\n\t- mixed indent"))
+	if err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+
+	errs = svc.ValidateConfig("test-project", "bad-syntax.yaml")
+	if len(errs) == 0 {
+		t.Error("expected YAML syntax errors for bad-syntax.yaml")
+	}
+
+	// Non-eval file with valid YAML → syntax check passes
+	err = svc.SaveConfig("test-project", "tasks.yaml", []byte("- id: test\n  name: test\n"))
+	if err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+
+	errs = svc.ValidateConfig("test-project", "tasks.yaml")
+	if len(errs) != 0 {
+		t.Errorf("expected no errors for valid task YAML, got: %v", errs)
 	}
 }
 

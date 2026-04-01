@@ -36,12 +36,12 @@ async function handleStartRun() {
   starting.value = true
   try {
     const resp = await startRun(currentProjectName.value, selectedConfig.value)
-    message.success(`Run started: ${resp.run_id.slice(0, 8)}`)
     showNewRun.value = false
+    starting.value = false
+    message.success(`Run started: ${resp.run_id.slice(0, 8)}`, { duration: 3000 })
     router.push({ name: 'run-detail', params: { id: resp.run_id } })
   } catch (e: unknown) {
     message.error(`Failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
-  } finally {
     starting.value = false
   }
 }
@@ -105,8 +105,14 @@ const configOptions = computed(() =>
 
     <NEmpty v-else description="Select a project first" />
 
-    <NModal v-model:show="showNewRun" title="Start New Run" preset="dialog" positive-text="Start" :loading="starting" @positive-click="handleStartRun">
-      <NSelect v-model:value="selectedConfig" :options="configOptions" placeholder="Select config file" />
+    <NModal v-model:show="showNewRun" title="Start New Run" preset="card" style="width: 400px">
+      <NSpace vertical :size="12">
+        <NSelect v-model:value="selectedConfig" :options="configOptions" placeholder="Select config file" />
+        <NSpace justify="end">
+          <NButton @click="showNewRun = false">Cancel</NButton>
+          <NButton type="primary" :loading="starting" :disabled="!selectedConfig" @click="handleStartRun">Start</NButton>
+        </NSpace>
+      </NSpace>
     </NModal>
   </NSpace>
 </template>

@@ -4,6 +4,14 @@ export interface Project {
   path: string
 }
 
+// File tree
+export interface FileNode {
+  name: string
+  type: 'file' | 'dir'
+  path: string
+  children?: FileNode[]
+}
+
 // Config validation
 export interface ValidationResult {
   valid: boolean
