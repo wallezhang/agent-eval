@@ -52,6 +52,7 @@ build/
 *.html
 !pkg/report/templates/*.html.tmpl
 !templates/**/*.html
+!web/frontend/index.html
 
 # Log files
 *.log
