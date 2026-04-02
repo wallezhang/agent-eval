@@ -97,46 +97,53 @@ function handleCreateDir() {
   emit('createDir', fullPath)
   showNewDirModal.value = false
 }
+
+function fileItemClass(path: string): string {
+  if (path === props.selectedFile) {
+    return 'bg-primary-light text-primary font-medium border-l-2 border-l-primary'
+  }
+  return 'text-muted hover:bg-zinc-100 hover:text-zinc-700'
+}
 </script>
 
 <template>
   <div class="flex flex-col h-full">
-    <div class="flex-1 overflow-y-auto py-2">
+    <div class="flex-1 overflow-y-auto py-2 styled-scrollbar">
       <template v-if="tree.length > 0">
         <div v-for="node in tree" :key="node.path">
           <!-- Directory -->
           <template v-if="node.type === 'dir'">
             <button
-              class="flex items-center gap-1.5 w-full px-2 py-1 text-sm text-muted hover:bg-zinc-100 rounded transition-colors"
+              class="flex items-center gap-1.5 w-full px-2 py-1.5 text-sm text-muted hover:bg-zinc-100 hover:text-zinc-700 rounded transition-all duration-200"
               @click="toggleDir(node.path)"
             >
               <ChevronRight
-                class="h-3.5 w-3.5 transition-transform flex-shrink-0"
+                class="h-3.5 w-3.5 transition-transform duration-200 flex-shrink-0"
                 :class="{ 'rotate-90': expandedDirs.has(node.path) }"
               />
-              <Folder class="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <Folder class="h-4 w-4 text-primary flex-shrink-0" />
               <span class="truncate">{{ node.name }}</span>
             </button>
             <div v-if="expandedDirs.has(node.path) && node.children" class="pl-4">
               <template v-for="child in node.children" :key="child.path">
                 <template v-if="child.type === 'dir'">
                   <button
-                    class="flex items-center gap-1.5 w-full px-2 py-1 text-sm text-muted hover:bg-zinc-100 rounded transition-colors"
+                    class="flex items-center gap-1.5 w-full px-2 py-1.5 text-sm text-muted hover:bg-zinc-100 hover:text-zinc-700 rounded transition-all duration-200"
                     @click="toggleDir(child.path)"
                   >
                     <ChevronRight
-                      class="h-3.5 w-3.5 transition-transform flex-shrink-0"
+                      class="h-3.5 w-3.5 transition-transform duration-200 flex-shrink-0"
                       :class="{ 'rotate-90': expandedDirs.has(child.path) }"
                     />
-                    <Folder class="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    <Folder class="h-4 w-4 text-primary flex-shrink-0" />
                     <span class="truncate">{{ child.name }}</span>
                   </button>
                   <div v-if="expandedDirs.has(child.path) && child.children" class="pl-4">
                     <button
                       v-for="leaf in child.children"
                       :key="leaf.path"
-                      class="flex items-center gap-1.5 w-full px-2 py-1 text-sm rounded transition-colors"
-                      :class="leaf.path === selectedFile ? 'bg-primary-light text-primary font-medium' : 'text-muted hover:bg-zinc-100'"
+                      class="flex items-center gap-1.5 w-full px-2 py-1.5 text-sm rounded transition-all duration-200"
+                      :class="fileItemClass(leaf.path)"
                       @click="leaf.type === 'file' ? selectFile(leaf.path) : toggleDir(leaf.path)"
                     >
                       <span class="w-3.5 flex-shrink-0" />
@@ -147,8 +154,8 @@ function handleCreateDir() {
                 </template>
                 <template v-else>
                   <button
-                    class="flex items-center gap-1.5 w-full px-2 py-1 text-sm rounded transition-colors"
-                    :class="child.path === selectedFile ? 'bg-primary-light text-primary font-medium' : 'text-muted hover:bg-zinc-100'"
+                    class="flex items-center gap-1.5 w-full px-2 py-1.5 text-sm rounded transition-all duration-200"
+                    :class="fileItemClass(child.path)"
                     @click="selectFile(child.path)"
                   >
                     <span class="w-3.5 flex-shrink-0" />
@@ -162,8 +169,8 @@ function handleCreateDir() {
           <!-- File at root -->
           <template v-else>
             <button
-              class="flex items-center gap-1.5 w-full px-2 py-1 text-sm rounded transition-colors"
-              :class="node.path === selectedFile ? 'bg-primary-light text-primary font-medium' : 'text-muted hover:bg-zinc-100'"
+              class="flex items-center gap-1.5 w-full px-2 py-1.5 text-sm rounded transition-all duration-200"
+              :class="fileItemClass(node.path)"
               @click="selectFile(node.path)"
             >
               <span class="w-3.5 flex-shrink-0" />
@@ -173,17 +180,18 @@ function handleCreateDir() {
           </template>
         </div>
       </template>
-      <div v-else class="flex items-center justify-center py-6 text-sm text-muted-foreground">
+      <div v-else class="flex flex-col items-center justify-center py-8 text-sm text-muted-foreground gap-1">
+        <File class="h-8 w-8 text-muted-foreground/40 mb-1" />
         No config files
       </div>
     </div>
 
     <!-- Bottom actions -->
-    <div class="border-t border-gray-200 px-2 py-2 flex gap-1">
-      <button class="text-xs text-muted hover:text-zinc-900 px-2 py-1 transition-colors" @click="openNewDirModal">
+    <div class="border-t border-gray-200/80 px-2 py-2 flex gap-1">
+      <button class="text-xs text-muted hover:text-primary px-2 py-1 transition-colors duration-200 border border-dashed border-transparent hover:border-primary/30 rounded" @click="openNewDirModal">
         + Folder
       </button>
-      <button class="text-xs text-muted hover:text-zinc-900 px-2 py-1 transition-colors" @click="openNewFileModal">
+      <button class="text-xs text-muted hover:text-primary px-2 py-1 transition-colors duration-200 border border-dashed border-transparent hover:border-primary/30 rounded" @click="openNewFileModal">
         + File
       </button>
     </div>

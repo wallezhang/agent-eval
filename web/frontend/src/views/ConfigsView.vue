@@ -9,6 +9,7 @@ import { listAgentTypes, listGraderTypes } from '@/api/meta'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Blocks, Cog } from 'lucide-vue-next'
 import FileTree from '@/components/FileTree.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import type { FileNode, ValidationResult } from '@/types'
@@ -147,11 +148,11 @@ onMounted(async () => {
 <template>
   <div class="h-[calc(100vh-48px)] flex flex-col">
     <div class="flex items-center justify-between mb-3 flex-shrink-0">
-      <h1 class="text-xl font-semibold text-zinc-900 tracking-tight">Configurations</h1>
+      <h1 class="text-2xl font-extrabold text-zinc-900 tracking-tight font-display">Configurations</h1>
     </div>
 
     <div v-if="currentProjectName" class="flex-1 flex gap-3 min-h-0">
-      <div class="w-[240px] flex-shrink-0 bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div class="w-[240px] flex-shrink-0 bg-white border border-gray-200 rounded-lg overflow-hidden card-shadow">
         <FileTree
           :tree="tree"
           :selected-file="selectedFile"
@@ -164,9 +165,9 @@ onMounted(async () => {
       <div v-if="selectedFile" class="flex-1 flex flex-col min-w-0">
         <div class="flex items-center justify-between mb-2 flex-shrink-0">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-zinc-900">{{ selectedFile }}</span>
-            <Badge v-if="validation.valid" class="bg-success-light text-success border-0">Valid</Badge>
-            <Badge v-else class="bg-error-light text-error border-0">{{ validation.errors.length }} error(s)</Badge>
+            <span class="text-sm font-semibold text-zinc-900 font-display">{{ selectedFile }}</span>
+            <Badge v-if="validation.valid" class="bg-success-light text-success border-0 rounded-full shadow-sm">Valid</Badge>
+            <Badge v-else class="bg-error-light text-error border-0 rounded-full shadow-sm">{{ validation.errors.length }} error(s)</Badge>
           </div>
           <Button size="sm" :disabled="!isDirty || saving" @click="handleSave">
             {{ saving ? 'Saving...' : 'Save' }}
@@ -177,7 +178,7 @@ onMounted(async () => {
           v-if="!validation.valid && validation.errors.length > 0"
           class="mb-2 p-3 bg-error-light border border-red-200 rounded-lg text-sm text-error flex-shrink-0"
         >
-          <p class="font-medium mb-1">Validation Errors</p>
+          <p class="font-semibold mb-1 font-display">Validation Errors</p>
           <ul class="list-disc pl-5 space-y-0.5">
             <li v-for="(err, i) in validation.errors" :key="i">{{ err }}</li>
           </ul>
@@ -187,10 +188,12 @@ onMounted(async () => {
           <div class="flex-1 min-w-0">
             <YamlEditor v-model="content" />
           </div>
-          <div class="w-[220px] flex-shrink-0 overflow-y-auto space-y-2">
-            <Card>
+          <div class="w-[220px] flex-shrink-0 overflow-y-auto space-y-2 styled-scrollbar">
+            <Card class="card-shadow">
               <CardHeader class="pb-2 pt-4 px-4">
-                <CardTitle class="text-sm">Quick Insert</CardTitle>
+                <CardTitle class="text-sm font-display font-semibold flex items-center gap-2">
+                  <Blocks class="h-3.5 w-3.5 text-primary" /> Quick Insert
+                </CardTitle>
               </CardHeader>
               <CardContent class="px-4 pb-4 space-y-1.5">
                 <Button variant="outline" size="sm" class="w-full justify-start text-xs" @click="insertSnippet(agentTemplate)">Agent Template</Button>
@@ -198,23 +201,27 @@ onMounted(async () => {
                 <Button variant="outline" size="sm" class="w-full justify-start text-xs" @click="insertSnippet(graderTemplate)">Grader Template</Button>
               </CardContent>
             </Card>
-            <Card>
+            <Card class="card-shadow">
               <CardHeader class="pb-2 pt-4 px-4">
-                <CardTitle class="text-sm">Agent Types</CardTitle>
+                <CardTitle class="text-sm font-display font-semibold flex items-center gap-2">
+                  <Cog class="h-3.5 w-3.5 text-primary" /> Agent Types
+                </CardTitle>
               </CardHeader>
               <CardContent class="px-4 pb-4">
                 <div class="space-y-1">
-                  <code v-for="t in agentTypes" :key="t" class="block text-xs bg-zinc-100 px-2 py-0.5 rounded">{{ t }}</code>
+                  <code v-for="t in agentTypes" :key="t" class="block text-xs bg-zinc-100 px-2 py-1 rounded font-mono">{{ t }}</code>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card class="card-shadow">
               <CardHeader class="pb-2 pt-4 px-4">
-                <CardTitle class="text-sm">Grader Types</CardTitle>
+                <CardTitle class="text-sm font-display font-semibold flex items-center gap-2">
+                  <Cog class="h-3.5 w-3.5 text-primary" /> Grader Types
+                </CardTitle>
               </CardHeader>
               <CardContent class="px-4 pb-4">
                 <div class="space-y-1">
-                  <code v-for="t in graderTypes" :key="t" class="block text-xs bg-zinc-100 px-2 py-0.5 rounded">{{ t }}</code>
+                  <code v-for="t in graderTypes" :key="t" class="block text-xs bg-zinc-100 px-2 py-1 rounded font-mono">{{ t }}</code>
                 </div>
               </CardContent>
             </Card>
@@ -222,12 +229,14 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div v-else class="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+      <div v-else class="flex-1 flex flex-col items-center justify-center text-sm text-muted-foreground gap-2">
+        <Blocks class="h-10 w-10 text-muted-foreground/30 mb-1" />
         Select a file from the tree to edit
       </div>
     </div>
 
-    <div v-else class="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+    <div v-else class="flex-1 flex flex-col items-center justify-center text-sm text-muted-foreground gap-2">
+      <Blocks class="h-10 w-10 text-muted-foreground/30 mb-1" />
       Select a project first
     </div>
   </div>

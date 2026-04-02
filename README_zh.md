@@ -630,7 +630,7 @@ agent-eval/
 ├── web/
 │   ├── embed.go                  # //go:embed frontend/dist
 │   ├── server/                   # Web 后端（Chi 路由、API、SSE）
-│   └── frontend/                 # Vue 3 SPA（TypeScript、Naive UI）
+│   └── frontend/                 # Vue 3 SPA（TypeScript、shadcn-vue、Tailwind CSS）
 ├── examples/
 │   ├── simple/                   # 命令 Agent 示例
 │   ├── multi-grader/             # 多评分器示例

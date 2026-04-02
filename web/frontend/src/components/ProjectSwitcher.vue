@@ -100,7 +100,7 @@ function openAddModal() {
           </SelectContent>
         </Select>
         <button
-          class="w-full text-xs text-muted hover:text-zinc-900 py-1 transition-colors"
+          class="w-full text-xs text-muted hover:text-primary py-1.5 transition-all duration-200 border border-dashed border-gray-300 hover:border-primary/40 rounded-md mt-1"
           @click="openAddModal"
         >
           + Add Project

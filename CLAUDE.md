@@ -44,7 +44,7 @@ This is a YAML-config-driven CLI tool for evaluating AI agents. Module: `github.
 | `pkg/report/` | Report generation: table (stdout), JSON, HTML (embedded template via `//go:embed`), diff |
 | `pkg/llm/` | LLM client, used only by `llm` and `pairwise` graders (agents call APIs directly) |
 | `web/server/` | Web UI backend: Chi router, REST API handlers, SSE streaming, RunManager, Service layer |
-| `web/frontend/` | Web UI frontend: Vue 3 SPA (TypeScript, Naive UI, CodeMirror 6, Pinia) |
+| `web/frontend/` | Web UI frontend: Vue 3 SPA (TypeScript, shadcn-vue, Tailwind CSS, CodeMirror 6, Pinia) |
 | `web/embed.go` | `//go:embed` for embedding frontend dist into Go binary |
 
 ### Execution Flow
@@ -103,7 +103,7 @@ The `server` subcommand starts a web UI (single binary, frontend embedded via `g
 - Static file serving with SPA fallback for client-side routing
 
 **Frontend** (`web/frontend/`):
-- Vue 3 + TypeScript + Vite, Naive UI components, Pinia state management
+- Vue 3 + TypeScript + Vite, shadcn-vue + Tailwind CSS components, Pinia state management
 - CodeMirror 6 for YAML config editing
 - Pages: Dashboard, Configurations (CRUD + editor), Runs (list + SSE detail), Results, Settings
 

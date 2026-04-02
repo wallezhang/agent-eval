@@ -58,5 +58,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="editorRef" class="h-full rounded-lg border border-gray-200 overflow-hidden" />
+  <div ref="editorRef" class="h-full rounded-lg border border-gray-200 overflow-hidden transition-shadow duration-200 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 shadow-inner" />
 </template>

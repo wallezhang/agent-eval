@@ -6,7 +6,7 @@ import { useRunStore } from '@/stores/run'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { listConfigs } from '@/api/configs'
-import { Button } from '@/components/ui/button'
+import { LayoutDashboard } from 'lucide-vue-next'
 import {
   Table,
   TableBody,
@@ -56,10 +56,6 @@ function handleRowClick(row: EvalRun) {
   router.push({ name: 'result-detail', params: { id: row.id } })
 }
 
-function goToNewRun() {
-  router.push({ name: 'runs' })
-}
-
 function formatPassRate(run: EvalRun): string {
   return `${((run.summary?.overall_pass_rate ?? 0) * 100).toFixed(1)}%`
 }
@@ -71,58 +67,76 @@ function formatDuration(run: EvalRun): string {
 function formatDate(run: EvalRun): string {
   return run.started_at ? new Date(run.started_at).toLocaleString() : '-'
 }
+
+function passRateColor(run: EvalRun): string {
+  const rate = run.summary?.overall_pass_rate ?? 0
+  if (rate >= 0.8) return 'text-success font-semibold'
+  if (rate >= 0.5) return 'text-warning font-semibold'
+  return 'text-error font-semibold'
+}
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-xl font-semibold text-zinc-900 tracking-tight">Dashboard</h1>
+        <h1 class="text-2xl font-extrabold tracking-tight font-display">
+          <span class="text-gradient">Dashboard</span>
+        </h1>
         <p class="text-sm text-muted-foreground mt-1">Overview of your evaluations</p>
       </div>
-      <Button :disabled="!currentProjectName" @click="goToNewRun">New Run</Button>
     </div>
 
     <template v-if="currentProjectName">
       <SummaryCards :cards="summaryCards" />
 
       <div>
-        <h3 class="text-base font-medium text-zinc-900 mb-3">Recent Runs</h3>
-        <div v-if="recentRuns.length > 0" class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <h3 class="text-base font-semibold text-zinc-900 mb-3 font-display">Recent Runs</h3>
+        <div v-if="recentRuns.length > 0" class="bg-white rounded-lg border border-gray-200 card-shadow overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Suite</TableHead>
-                <TableHead>Agent</TableHead>
-                <TableHead>Pass Rate</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Date</TableHead>
+              <TableRow class="bg-zinc-50/50">
+                <TableHead class="font-display font-semibold text-xs uppercase tracking-wider">Suite</TableHead>
+                <TableHead class="font-display font-semibold text-xs uppercase tracking-wider">Agent</TableHead>
+                <TableHead class="font-display font-semibold text-xs uppercase tracking-wider">Pass Rate</TableHead>
+                <TableHead class="font-display font-semibold text-xs uppercase tracking-wider">Duration</TableHead>
+                <TableHead class="font-display font-semibold text-xs uppercase tracking-wider">Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow
-                v-for="run in recentRuns.slice(0, 10)"
+                v-for="(run, index) in recentRuns.slice(0, 10)"
                 :key="run.id"
-                class="cursor-pointer hover:bg-zinc-50"
+                class="cursor-pointer hover:bg-primary-light/30 transition-colors duration-200 group"
+                :class="index % 2 === 1 ? 'bg-zinc-50/30' : ''"
                 @click="handleRowClick(run)"
               >
-                <TableCell class="font-medium">{{ run.suite_name }}</TableCell>
+                <TableCell class="font-medium">
+                  <div class="flex items-center gap-2">
+                    <div class="w-0.5 h-4 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    {{ run.suite_name }}
+                  </div>
+                </TableCell>
                 <TableCell>{{ run.agent_type }}</TableCell>
-                <TableCell>{{ formatPassRate(run) }}</TableCell>
+                <TableCell :class="passRateColor(run)">{{ formatPassRate(run) }}</TableCell>
                 <TableCell>{{ formatDuration(run) }}</TableCell>
                 <TableCell class="text-muted-foreground">{{ formatDate(run) }}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </div>
-        <div v-else class="flex items-center justify-center py-12 text-sm text-muted-foreground">
-          No runs yet. Start one from the Runs page.
+        <div v-else class="flex flex-col items-center justify-center py-16 text-sm text-muted-foreground gap-2">
+          <LayoutDashboard class="h-10 w-10 text-muted-foreground/30 mb-1" />
+          <span>No runs yet.</span>
+          <span class="text-xs">Start one from the Runs page.</span>
         </div>
       </div>
     </template>
 
-    <div v-else class="flex items-center justify-center py-12 text-sm text-muted-foreground">
-      No project selected. Add a project to get started.
+    <div v-else class="flex flex-col items-center justify-center py-16 text-sm text-muted-foreground gap-2">
+      <LayoutDashboard class="h-10 w-10 text-muted-foreground/30 mb-1" />
+      <span>No project selected.</span>
+      <span class="text-xs">Add a project to get started.</span>
     </div>
   </div>
 </template>

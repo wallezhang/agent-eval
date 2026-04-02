@@ -630,7 +630,7 @@ agent-eval/
 ├── web/
 │   ├── embed.go                  # //go:embed frontend/dist
 │   ├── server/                   # Web backend (Chi router, handlers, SSE)
-│   └── frontend/                 # Vue 3 SPA (TypeScript, Naive UI)
+│   └── frontend/                 # Vue 3 SPA (TypeScript, shadcn-vue, Tailwind CSS)
 ├── examples/
 │   ├── simple/                   # Command agent example
 │   ├── multi-grader/             # Multi-grader example
