@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
-import { NSpace, NText, NButton, NCard, NTag, useMessage } from 'naive-ui'
+import { toast } from 'vue-sonner'
+import { ArrowLeft } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/project'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { cancelRun, getRunSSEUrl } from '@/api/runs'
 import { useSSE } from '@/composables/useSSE'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import RunProgress from '@/components/RunProgress.vue'
 import type { SSERunStarted, SSETrialCompleted, SSERunProgress, SSERunCompleted, SSERunError } from '@/types'
 
@@ -14,7 +18,6 @@ const props = defineProps<{ id: string }>()
 const projectStore = useProjectStore()
 const { currentProjectName } = storeToRefs(projectStore)
 const router = useRouter()
-const message = useMessage()
 
 const suiteName = ref('')
 const isRunning = ref(true)
@@ -28,8 +31,6 @@ const sseUrl = computed(() =>
 
 const sse = useSSE(sseUrl.value)
 
-// Process SSE events without infinite loop
-// Watch the array length instead of deep-watching the array itself
 let lastProcessedIndex = 0
 watch(
   () => sse.events.value.length,
@@ -66,7 +67,7 @@ function handleSSEEvent(evt: { type: string; data: unknown }) {
       const d = evt.data as SSERunCompleted
       isRunning.value = false
       logs.value.push(`Run completed: ${d.run_id.slice(0, 8)}`)
-      message.success('Run completed')
+      toast.success('Run completed')
       break
     }
     case 'run_error': {
@@ -94,9 +95,9 @@ async function handleCancel() {
   if (!currentProjectName.value) return
   try {
     await cancelRun(currentProjectName.value, props.id)
-    message.info('Cancelling run...')
+    toast.info('Cancelling run...')
   } catch {
-    message.error('Failed to cancel')
+    toast.error('Failed to cancel')
   }
 }
 
@@ -106,21 +107,23 @@ function viewResults() {
 </script>
 
 <template>
-  <NSpace vertical :size="16">
-    <NSpace justify="space-between" align="center">
-      <NSpace align="center">
-        <NButton quaternary @click="router.push({ name: 'runs' })">← Back</NButton>
-        <NText tag="h1" style="margin: 0">{{ suiteName || 'Run' }}</NText>
-        <NText code depth="3">{{ id.slice(0, 8) }}</NText>
-        <NTag v-if="isRunning" type="info">Running</NTag>
-        <NTag v-else-if="errorMsg" type="error">Error</NTag>
-        <NTag v-else type="success">Completed</NTag>
-      </NSpace>
-      <NSpace>
-        <NButton v-if="isRunning" type="error" @click="handleCancel">Cancel</NButton>
-        <NButton v-if="!isRunning && !errorMsg" type="primary" @click="viewResults">View Results</NButton>
-      </NSpace>
-    </NSpace>
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <Button variant="ghost" size="sm" @click="router.push({ name: 'runs' })">
+          <ArrowLeft class="h-4 w-4 mr-1" /> Back
+        </Button>
+        <h1 class="text-xl font-semibold text-zinc-900 tracking-tight">{{ suiteName || 'Run' }}</h1>
+        <code class="text-sm bg-zinc-100 px-1.5 py-0.5 rounded text-muted-foreground">{{ id.slice(0, 8) }}</code>
+        <Badge v-if="isRunning" class="bg-blue-50 text-blue-600 border-0">Running</Badge>
+        <Badge v-else-if="errorMsg" class="bg-error-light text-error border-0">Error</Badge>
+        <Badge v-else class="bg-success-light text-success border-0">Completed</Badge>
+      </div>
+      <div class="flex items-center gap-2">
+        <Button v-if="isRunning" variant="destructive" @click="handleCancel">Cancel</Button>
+        <Button v-if="!isRunning && !errorMsg" @click="viewResults">View Results</Button>
+      </div>
+    </div>
 
     <RunProgress
       :completed="progress.completed"
@@ -130,11 +133,16 @@ function viewResults() {
       :error-count="progress.error_count"
     />
 
-    <NCard title="Log" size="small">
-      <div style="background: #1a1a2e; color: #e0e0e0; font-family: monospace; font-size: 13px; padding: 12px; border-radius: 4px; max-height: 400px; overflow-y: auto; white-space: pre-wrap;">
-        <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
-        <div v-if="logs.length === 0" style="color: #666">Waiting for events...</div>
-      </div>
-    </NCard>
-  </NSpace>
+    <Card>
+      <CardHeader class="pb-2">
+        <CardTitle class="text-sm">Log</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="bg-zinc-900 text-zinc-300 font-mono text-xs p-4 rounded-lg max-h-[400px] overflow-y-auto whitespace-pre-wrap">
+          <div v-for="(log, i) in logs" :key="i">{{ log }}</div>
+          <div v-if="logs.length === 0" class="text-zinc-600">Waiting for events...</div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 </template>

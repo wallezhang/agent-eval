@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { NSpace, NText, NButton, NDataTable, NTag, NEmpty, useMessage } from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
+import { toast } from 'vue-sonner'
 import { useProjectStore } from '@/stores/project'
 import { useRunStore } from '@/stores/run'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { listConfigs } from '@/api/configs'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import SummaryCards from '@/components/SummaryCards.vue'
 import type { SummaryCard } from '@/components/SummaryCards.vue'
 import type { EvalRun } from '@/types'
@@ -16,7 +24,6 @@ const runStore = useRunStore()
 const { currentProjectName } = storeToRefs(projectStore)
 const { recentRuns, activeRuns } = storeToRefs(runStore)
 const router = useRouter()
-const message = useMessage()
 const configCount = ref(0)
 
 const summaryCards = computed<SummaryCard[]>(() => {
@@ -32,23 +39,6 @@ const summaryCards = computed<SummaryCard[]>(() => {
   ]
 })
 
-const columns: DataTableColumns<EvalRun> = [
-  { title: 'Suite', key: 'suite_name' },
-  { title: 'Agent', key: 'agent_type' },
-  {
-    title: 'Pass Rate', key: 'pass_rate',
-    render(row) { return `${((row.summary?.overall_pass_rate ?? 0) * 100).toFixed(1)}%` },
-  },
-  {
-    title: 'Duration', key: 'duration_ms',
-    render(row) { return `${((row.duration_ms ?? 0) / 1000).toFixed(1)}s` },
-  },
-  {
-    title: 'Date', key: 'started_at',
-    render(row) { return row.started_at ? new Date(row.started_at).toLocaleString() : '-' },
-  },
-]
-
 async function loadData() {
   if (!currentProjectName.value) return
   try {
@@ -56,7 +46,7 @@ async function loadData() {
     const configs = await listConfigs(currentProjectName.value)
     configCount.value = configs.length
   } catch {
-    message.error('Failed to load dashboard data')
+    toast.error('Failed to load dashboard data')
   }
 }
 
@@ -69,30 +59,70 @@ function handleRowClick(row: EvalRun) {
 function goToNewRun() {
   router.push({ name: 'runs' })
 }
+
+function formatPassRate(run: EvalRun): string {
+  return `${((run.summary?.overall_pass_rate ?? 0) * 100).toFixed(1)}%`
+}
+
+function formatDuration(run: EvalRun): string {
+  return `${((run.duration_ms ?? 0) / 1000).toFixed(1)}s`
+}
+
+function formatDate(run: EvalRun): string {
+  return run.started_at ? new Date(run.started_at).toLocaleString() : '-'
+}
 </script>
 
 <template>
-  <NSpace vertical :size="24">
-    <NSpace justify="space-between" align="center">
-      <NText tag="h1" style="margin: 0">Dashboard</NText>
-      <NButton type="primary" :disabled="!currentProjectName" @click="goToNewRun">
-        New Run
-      </NButton>
-    </NSpace>
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-semibold text-zinc-900 tracking-tight">Dashboard</h1>
+        <p class="text-sm text-muted-foreground mt-1">Overview of your evaluations</p>
+      </div>
+      <Button :disabled="!currentProjectName" @click="goToNewRun">New Run</Button>
+    </div>
 
     <template v-if="currentProjectName">
       <SummaryCards :cards="summaryCards" />
 
-      <NText tag="h3">Recent Runs</NText>
-      <NDataTable
-        v-if="recentRuns.length > 0"
-        :columns="columns"
-        :data="recentRuns.slice(0, 10)"
-        :row-props="(row: EvalRun) => ({ style: 'cursor: pointer', onClick: () => handleRowClick(row) })"
-      />
-      <NEmpty v-else description="No runs yet. Start one from the Runs page." />
+      <div>
+        <h3 class="text-base font-medium text-zinc-900 mb-3">Recent Runs</h3>
+        <div v-if="recentRuns.length > 0" class="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Suite</TableHead>
+                <TableHead>Agent</TableHead>
+                <TableHead>Pass Rate</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow
+                v-for="run in recentRuns.slice(0, 10)"
+                :key="run.id"
+                class="cursor-pointer hover:bg-zinc-50"
+                @click="handleRowClick(run)"
+              >
+                <TableCell class="font-medium">{{ run.suite_name }}</TableCell>
+                <TableCell>{{ run.agent_type }}</TableCell>
+                <TableCell>{{ formatPassRate(run) }}</TableCell>
+                <TableCell>{{ formatDuration(run) }}</TableCell>
+                <TableCell class="text-muted-foreground">{{ formatDate(run) }}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+        <div v-else class="flex items-center justify-center py-12 text-sm text-muted-foreground">
+          No runs yet. Start one from the Runs page.
+        </div>
+      </div>
     </template>
 
-    <NEmpty v-else description="No project selected. Add a project to get started." />
-  </NSpace>
+    <div v-else class="flex items-center justify-center py-12 text-sm text-muted-foreground">
+      No project selected. Add a project to get started.
+    </div>
+  </div>
 </template>

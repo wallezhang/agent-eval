@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NSpace, NText, NCard, NDescriptions, NDescriptionsItem } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 import { storeToRefs } from 'pinia'
 import { getProjectInfo } from '@/api/projects'
 import type { ProjectInfo } from '@/api/projects'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const projectStore = useProjectStore()
 const { currentProjectName } = storeToRefs(projectStore)
@@ -27,14 +27,29 @@ watch(currentProjectName, loadInfo, { immediate: true })
 </script>
 
 <template>
-  <NSpace vertical :size="16">
-    <NText tag="h1" style="margin: 0">Settings</NText>
-    <NCard title="Project Information" size="small">
-      <NDescriptions label-placement="left" :column="1" bordered>
-        <NDescriptionsItem label="Project Name">{{ info?.name || 'None selected' }}</NDescriptionsItem>
-        <NDescriptionsItem label="Project Path">{{ info?.path || 'N/A' }}</NDescriptionsItem>
-        <NDescriptionsItem label="Database Path">{{ info?.db_path || 'N/A' }}</NDescriptionsItem>
-      </NDescriptions>
-    </NCard>
-  </NSpace>
+  <div class="space-y-6">
+    <h1 class="text-xl font-semibold text-zinc-900 tracking-tight">Settings</h1>
+
+    <Card>
+      <CardHeader class="pb-2">
+        <CardTitle class="text-sm">Project Information</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="divide-y divide-gray-200">
+          <div class="flex py-3">
+            <span class="w-40 text-sm font-medium text-zinc-900">Project Name</span>
+            <span class="text-sm text-muted-foreground">{{ info?.name || 'None selected' }}</span>
+          </div>
+          <div class="flex py-3">
+            <span class="w-40 text-sm font-medium text-zinc-900">Project Path</span>
+            <span class="text-sm text-muted-foreground">{{ info?.path || 'N/A' }}</span>
+          </div>
+          <div class="flex py-3">
+            <span class="w-40 text-sm font-medium text-zinc-900">Database Path</span>
+            <span class="text-sm text-muted-foreground">{{ info?.db_path || 'N/A' }}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 </template>

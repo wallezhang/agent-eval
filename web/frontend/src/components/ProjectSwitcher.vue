@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import {
-  NSelect,
-  NText,
-  NButton,
-  NSpace,
-  NModal,
-  NForm,
-  NFormItem,
-  NInput,
-  useMessage,
-} from 'naive-ui'
-import { useProjectStore } from '@/stores/project'
+import { toast } from 'vue-sonner'
 import { storeToRefs } from 'pinia'
+import { useProjectStore } from '@/stores/project'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog'
 
 const projectStore = useProjectStore()
 const { projects, currentProjectName } = storeToRefs(projectStore)
-const message = useMessage()
 
 const showAddModal = ref(false)
 const newName = ref('')
@@ -27,48 +33,45 @@ const nameManuallyEdited = ref(false)
 onMounted(async () => {
   try {
     await projectStore.fetchProjects()
-  } catch (e) {
-    message.error('Failed to load projects')
+  } catch {
+    toast.error('Failed to load projects')
   }
 })
 
-const projectOptions = computed(() =>
-  projects.value.map((p) => ({ label: p.name, value: p.name })),
-)
-
-function handleSelect(value: string) {
-  projectStore.selectProject(value)
+function handleSelect(value: any) {
+  if (typeof value === 'string') projectStore.selectProject(value)
 }
 
-function handlePathInput(value: string) {
+function handlePathInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value
   newPath.value = value
   if (!nameManuallyEdited.value) {
-    // Extract last folder name from path, ignoring trailing slashes
     const trimmed = value.replace(/\/+$/, '')
     const lastSegment = trimmed.split('/').pop() || ''
     newName.value = lastSegment
   }
 }
 
-function handleNameInput(value: string) {
+function handleNameInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value
   newName.value = value
   nameManuallyEdited.value = value !== ''
 }
 
 async function handleAdd() {
   if (!newName.value.trim() || !newPath.value.trim()) {
-    message.warning('Name and path are required')
+    toast.warning('Name and path are required')
     return
   }
   adding.value = true
   try {
     await projectStore.add(newName.value.trim(), newPath.value.trim())
-    message.success(`Project "${newName.value}" added`)
+    toast.success(`Project "${newName.value}" added`)
     showAddModal.value = false
     newName.value = ''
     newPath.value = ''
   } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : 'Failed to add project')
+    toast.error(e instanceof Error ? e.message : 'Failed to add project')
   } finally {
     adding.value = false
   }
@@ -83,53 +86,69 @@ function openAddModal() {
 </script>
 
 <template>
-  <div style="padding: 8px 16px">
-    <NSpace v-if="projects.length > 0" vertical :size="4">
-      <NSelect
-        :value="currentProjectName"
-        :options="projectOptions"
-        placeholder="Select project"
-        size="small"
-        @update:value="handleSelect"
-      />
-      <NButton size="tiny" quaternary block @click="openAddModal">
-        + Add Project
-      </NButton>
-    </NSpace>
-    <NSpace v-else vertical :size="8" align="center">
-      <NText depth="3" style="font-size: 12px">No projects</NText>
-      <NButton size="small" type="primary" @click="openAddModal">
-        Add Project
-      </NButton>
-    </NSpace>
+  <div class="px-4 py-2">
+    <template v-if="projects.length > 0">
+      <div class="space-y-1">
+        <Select :model-value="currentProjectName ?? undefined" @update:model-value="handleSelect">
+          <SelectTrigger class="w-full h-8 text-sm">
+            <SelectValue placeholder="Select project" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="p in projects" :key="p.name" :value="p.name">
+              {{ p.name }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <button
+          class="w-full text-xs text-muted hover:text-zinc-900 py-1 transition-colors"
+          @click="openAddModal"
+        >
+          + Add Project
+        </button>
+      </div>
+    </template>
+    <template v-else>
+      <div class="flex flex-col items-center gap-2 py-2">
+        <span class="text-xs text-muted-foreground">No projects</span>
+        <Button size="sm" @click="openAddModal">Add Project</Button>
+      </div>
+    </template>
 
-    <NModal
-      v-model:show="showAddModal"
-      title="Add Project"
-      preset="dialog"
-      positive-text="Add"
-      :loading="adding"
-      @positive-click="handleAdd"
-    >
-      <NForm>
-        <NFormItem label="Project Path">
-          <NInput
-            :value="newPath"
-            placeholder="/path/to/agent-eval/project"
-            @update:value="handlePathInput"
-          />
-        </NFormItem>
-        <NFormItem label="Project Name">
-          <NInput
-            :value="newName"
-            placeholder="auto-filled from path"
-            @update:value="handleNameInput"
-          />
-        </NFormItem>
-      </NForm>
-      <NText depth="3" style="font-size: 12px">
-        Point to an existing directory created by <NText code>agent-eval init</NText>
-      </NText>
-    </NModal>
+    <Dialog v-model:open="showAddModal">
+      <DialogContent class="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add Project</DialogTitle>
+        </DialogHeader>
+        <div class="space-y-4 py-4">
+          <div class="space-y-2">
+            <label class="text-sm font-medium">Project Path</label>
+            <Input
+              :value="newPath"
+              placeholder="/path/to/agent-eval/project"
+              @input="handlePathInput"
+            />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium">Project Name</label>
+            <Input
+              :value="newName"
+              placeholder="auto-filled from path"
+              @input="handleNameInput"
+            />
+          </div>
+          <p class="text-xs text-muted-foreground">
+            Point to an existing directory created by <code class="bg-zinc-100 px-1 py-0.5 rounded text-xs">agent-eval init</code>
+          </p>
+        </div>
+        <DialogFooter>
+          <DialogClose as-child>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button :disabled="adding" @click="handleAdd">
+            {{ adding ? 'Adding...' : 'Add' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

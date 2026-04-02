@@ -58,5 +58,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="editorRef" style="height: 100%; border: 1px solid #e0e0e6; border-radius: 4px;" />
+  <div ref="editorRef" class="h-full rounded-lg border border-gray-200 overflow-hidden" />
 </template>

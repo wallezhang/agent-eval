@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
-import {
-  NSpace, NText, NCard, NGrid, NGridItem, NTag, NDataTable, NButton,
-  NSelect, NSpin, useMessage,
-} from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
+import { ref, computed, onMounted } from 'vue'
+import { toast } from 'vue-sonner'
+import { ArrowLeft, ChevronRight } from 'lucide-vue-next'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
@@ -14,7 +11,25 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { storeToRefs } from 'pinia'
 import { compareRuns } from '@/api/compare'
-import type { CompareResult, TaskComparison, CompareTrialDetail, CompareGradeDetail } from '@/types'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { CompareResult, TaskComparison } from '@/types'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -22,38 +37,30 @@ const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
 const { currentProjectName } = storeToRefs(projectStore)
-const message = useMessage()
 
 const result = ref<CompareResult | null>(null)
 const loading = ref(true)
 const statusFilter = ref<string>('all')
-
-const statusFilterOptions = [
-  { label: 'All', value: 'all' },
-  { label: 'Improved', value: 'improved' },
-  { label: 'Regressed', value: 'regressed' },
-  { label: 'Unchanged', value: 'unchanged' },
-]
+const expandedTasks = ref<Set<string>>(new Set())
 
 onMounted(async () => {
   const runA = route.query.runA as string
   const runB = route.query.runB as string
   if (!runA || !runB || !currentProjectName.value) {
-    message.error('Missing run IDs')
+    toast.error('Missing run IDs')
     router.push({ name: 'runs' })
     return
   }
   try {
     result.value = await compareRuns(currentProjectName.value, runA, runB)
   } catch (e: unknown) {
-    message.error(`Failed to compare runs: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    toast.error(`Failed to compare runs: ${e instanceof Error ? e.message : 'Unknown error'}`)
     router.push({ name: 'runs' })
   } finally {
     loading.value = false
   }
 })
 
-// Chart options
 const chartOption = computed(() => {
   if (!result.value) return {}
   const s = result.value.summary
@@ -61,29 +68,15 @@ const chartOption = computed(() => {
     tooltip: { trigger: 'axis' as const },
     legend: { data: ['Run A', 'Run B'] },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: {
-      type: 'category' as const,
-      data: ['Pass Rate', 'Avg Score', 'pass@k', 'pass^k'],
-    },
+    xAxis: { type: 'category' as const, data: ['Pass Rate', 'Avg Score', 'pass@k', 'pass^k'] },
     yAxis: { type: 'value' as const, max: 1.0 },
     series: [
-      {
-        name: 'Run A',
-        type: 'bar' as const,
-        data: [s.pass_rate.a, s.avg_score.a, s.avg_pass_at_k.a, s.avg_pass_power_k.a],
-        itemStyle: { color: '#5B8FF9' },
-      },
-      {
-        name: 'Run B',
-        type: 'bar' as const,
-        data: [s.pass_rate.b, s.avg_score.b, s.avg_pass_at_k.b, s.avg_pass_power_k.b],
-        itemStyle: { color: '#5AD8A6' },
-      },
+      { name: 'Run A', type: 'bar' as const, data: [s.pass_rate.a, s.avg_score.a, s.avg_pass_at_k.a, s.avg_pass_power_k.a], itemStyle: { color: '#f97316' } },
+      { name: 'Run B', type: 'bar' as const, data: [s.pass_rate.b, s.avg_score.b, s.avg_pass_at_k.b, s.avg_pass_power_k.b], itemStyle: { color: '#6366f1' } },
     ],
   }
 })
 
-// Metrics table
 interface MetricRow {
   metric: string
   a: string
@@ -112,75 +105,30 @@ const metricRows = computed<MetricRow[]>(() => {
   ]
 })
 
-// Task comparison table
 const filteredTasks = computed(() => {
   if (!result.value) return []
   if (statusFilter.value === 'all') return result.value.tasks
   return result.value.tasks.filter((t) => t.status === statusFilter.value)
 })
 
-const taskColumns: DataTableColumns<TaskComparison> = [
-  { title: 'Task ID', key: 'task_id', sorter: (a, b) => a.task_id.localeCompare(b.task_id) },
-  { title: 'Score A', key: 'score_a', sorter: (a, b) => a.score_a - b.score_a, render: (row) => row.score_a.toFixed(3) },
-  { title: 'Score B', key: 'score_b', sorter: (a, b) => a.score_b - b.score_b, render: (row) => row.score_b.toFixed(3) },
-  { title: 'Diff', key: 'diff', sorter: (a, b) => a.diff - b.diff, render: (row) => (row.diff >= 0 ? '+' : '') + row.diff.toFixed(3) },
-  {
-    title: 'Status',
-    key: 'status',
-    render: (row) => {
-      const typeMap: Record<string, 'success' | 'error' | 'default'> = {
-        improved: 'success',
-        regressed: 'error',
-        unchanged: 'default',
-      }
-      return h(NTag, { type: typeMap[row.status] || 'default', size: 'small' }, { default: () => row.status })
-    },
-  },
-]
-
-function renderTrialTable(trials: CompareTrialDetail[], label: string) {
-  if (!trials || trials.length === 0) {
-    return h(NText, { depth: 3 }, { default: () => `No ${label} trials` })
+function toggleTask(taskId: string) {
+  if (expandedTasks.value.has(taskId)) {
+    expandedTasks.value.delete(taskId)
+  } else {
+    expandedTasks.value.add(taskId)
   }
-  return h('div', { style: 'margin-bottom: 12px' }, [
-    h(NText, { strong: true, style: 'margin-bottom: 4px; display: block' }, { default: () => label }),
-    ...trials.map((trial, i) =>
-      h(NCard, { size: 'small', style: 'margin-bottom: 4px' }, {
-        default: () => h(NSpace, { vertical: true, size: 4 }, {
-          default: () => [
-            h(NSpace, { align: 'center', size: 8 }, {
-              default: () => [
-                h(NText, {}, { default: () => `Trial #${i}` }),
-                h(NTag, {
-                  type: trial.status === 'passed' ? 'success' : trial.status === 'failed' ? 'warning' : 'error',
-                  size: 'small',
-                }, { default: () => trial.status }),
-                h(NText, { depth: 3 }, { default: () => `Score: ${trial.score.toFixed(3)}` }),
-              ],
-            }),
-            ...(trial.grades || []).map((g: CompareGradeDetail) =>
-              h(NSpace, { align: 'center', size: 8, style: 'padding-left: 16px' }, {
-                default: () => [
-                  h(NTag, { type: g.pass ? 'success' : 'error', size: 'small' }, { default: () => g.grader_type }),
-                  h(NText, {}, { default: () => `Score: ${g.score.toFixed(3)}` }),
-                  g.reason ? h(NText, { depth: 3 }, { default: () => `— ${g.reason}` }) : null,
-                ],
-              }),
-            ),
-          ],
-        }),
-      }),
-    ),
-  ])
 }
 
-function renderExpandedRow(row: TaskComparison) {
-  return h(NGrid, { cols: 2, xGap: 16 }, {
-    default: () => [
-      h(NGridItem, {}, { default: () => renderTrialTable(row.trials_a, 'Run A') }),
-      h(NGridItem, {}, { default: () => renderTrialTable(row.trials_b, 'Run B') }),
-    ],
-  })
+function statusVariant(status: string): string {
+  if (status === 'improved') return 'bg-success-light text-success border-0'
+  if (status === 'regressed') return 'bg-error-light text-error border-0'
+  return ''
+}
+
+function diffColor(direction: string): string {
+  if (direction === 'up') return 'text-success'
+  if (direction === 'down') return 'text-error'
+  return 'text-muted-foreground'
 }
 
 function formatDate(s: string): string {
@@ -189,85 +137,157 @@ function formatDate(s: string): string {
 </script>
 
 <template>
-  <NSpin :show="loading">
-    <NSpace vertical :size="16" v-if="result">
-      <!-- Header -->
-      <NSpace align="center">
-        <NButton quaternary @click="router.push({ name: 'runs' })">← Back</NButton>
-        <NText tag="h1" style="margin: 0">Run Comparison</NText>
-      </NSpace>
+  <div v-if="loading" class="flex items-center justify-center py-24">
+    <div class="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+  </div>
 
-      <!-- Run Meta Cards -->
-      <NGrid :cols="2" :x-gap="16">
-        <NGridItem>
-          <NCard title="Run A" size="small">
-            <NSpace vertical :size="4">
-              <NText>ID: <NText code>{{ result.run_a.id.slice(0, 8) }}</NText></NText>
-              <NText>Suite: {{ result.run_a.suite_name }}</NText>
-              <NText>Agent: {{ result.run_a.agent_type }}</NText>
-              <NText depth="3">{{ formatDate(result.run_a.started_at) }}</NText>
-            </NSpace>
-          </NCard>
-        </NGridItem>
-        <NGridItem>
-          <NCard title="Run B" size="small">
-            <NSpace vertical :size="4">
-              <NText>ID: <NText code>{{ result.run_b.id.slice(0, 8) }}</NText></NText>
-              <NText>Suite: {{ result.run_b.suite_name }}</NText>
-              <NText>Agent: {{ result.run_b.agent_type }}</NText>
-              <NText depth="3">{{ formatDate(result.run_b.started_at) }}</NText>
-            </NSpace>
-          </NCard>
-        </NGridItem>
-      </NGrid>
+  <div v-else-if="result" class="space-y-6">
+    <div class="flex items-center gap-3">
+      <Button variant="ghost" size="sm" @click="router.push({ name: 'runs' })">
+        <ArrowLeft class="h-4 w-4 mr-1" /> Back
+      </Button>
+      <h1 class="text-xl font-semibold text-zinc-900 tracking-tight">Run Comparison</h1>
+    </div>
 
-      <!-- Summary Chart -->
-      <NCard title="Summary Metrics" size="small">
+    <div class="grid grid-cols-2 gap-4">
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm">Run A</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-1 text-sm">
+          <p>ID: <code class="bg-zinc-100 px-1 py-0.5 rounded text-xs">{{ result.run_a.id.slice(0, 8) }}</code></p>
+          <p>Suite: {{ result.run_a.suite_name }}</p>
+          <p>Agent: {{ result.run_a.agent_type }}</p>
+          <p class="text-muted-foreground">{{ formatDate(result.run_a.started_at) }}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm">Run B</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-1 text-sm">
+          <p>ID: <code class="bg-zinc-100 px-1 py-0.5 rounded text-xs">{{ result.run_b.id.slice(0, 8) }}</code></p>
+          <p>Suite: {{ result.run_b.suite_name }}</p>
+          <p>Agent: {{ result.run_b.agent_type }}</p>
+          <p class="text-muted-foreground">{{ formatDate(result.run_b.started_at) }}</p>
+        </CardContent>
+      </Card>
+    </div>
+
+    <Card>
+      <CardHeader class="pb-2">
+        <CardTitle class="text-sm">Summary Metrics</CardTitle>
+      </CardHeader>
+      <CardContent>
         <VChart :option="chartOption" style="height: 300px" autoresize />
-        <table style="width: 100%; margin-top: 12px; border-collapse: collapse;">
-          <thead>
-            <tr style="border-bottom: 1px solid #eee;">
-              <th style="text-align: left; padding: 4px 8px;">Metric</th>
-              <th style="text-align: right; padding: 4px 8px;">Run A</th>
-              <th style="text-align: right; padding: 4px 8px;">Run B</th>
-              <th style="text-align: right; padding: 4px 8px;">Diff</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in metricRows" :key="row.metric" style="border-bottom: 1px solid #f5f5f5;">
-              <td style="padding: 4px 8px;">{{ row.metric }}</td>
-              <td style="text-align: right; padding: 4px 8px;">{{ row.a }}</td>
-              <td style="text-align: right; padding: 4px 8px;">{{ row.b }}</td>
-              <td style="text-align: right; padding: 4px 8px;">
-                <span :style="{ color: row.direction === 'up' ? '#18a058' : row.direction === 'down' ? '#d03050' : '#999' }">
+        <div class="mt-4 bg-white rounded-lg border border-gray-200">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Metric</TableHead>
+                <TableHead class="text-right">Run A</TableHead>
+                <TableHead class="text-right">Run B</TableHead>
+                <TableHead class="text-right">Diff</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="row in metricRows" :key="row.metric">
+                <TableCell>{{ row.metric }}</TableCell>
+                <TableCell class="text-right">{{ row.a }}</TableCell>
+                <TableCell class="text-right">{{ row.b }}</TableCell>
+                <TableCell class="text-right" :class="diffColor(row.direction)">
                   {{ row.direction === 'up' ? '↑' : row.direction === 'down' ? '↓' : '=' }}
                   {{ row.diff }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </NCard>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
 
-      <!-- Task Comparison Table -->
-      <NCard title="Per-Task Comparison" size="small">
-        <template #header-extra>
-          <NSelect
-            v-model:value="statusFilter"
-            :options="statusFilterOptions"
-            size="small"
-            style="width: 140px"
-          />
-        </template>
-        <NDataTable
-          :columns="taskColumns"
-          :data="filteredTasks"
-          :row-key="(row: TaskComparison) => row.task_id"
-          :default-expand-all="false"
-          :render-expand="renderExpandedRow"
-          size="small"
-        />
-      </NCard>
-    </NSpace>
-  </NSpin>
+    <Card>
+      <CardHeader class="pb-2 flex flex-row items-center justify-between">
+        <CardTitle class="text-sm">Per-Task Comparison</CardTitle>
+        <Select v-model="statusFilter">
+          <SelectTrigger class="w-[140px] h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="improved">Improved</SelectItem>
+            <SelectItem value="regressed">Regressed</SelectItem>
+            <SelectItem value="unchanged">Unchanged</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent>
+        <div class="space-y-1">
+          <div v-for="task in filteredTasks" :key="task.task_id" class="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              class="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-zinc-50 transition-colors text-left"
+              @click="toggleTask(task.task_id)"
+            >
+              <ChevronRight
+                class="h-4 w-4 text-muted-foreground transition-transform flex-shrink-0"
+                :class="{ 'rotate-90': expandedTasks.has(task.task_id) }"
+              />
+              <span class="font-medium text-zinc-900 flex-1">{{ task.task_id }}</span>
+              <span class="text-muted-foreground">{{ task.score_a.toFixed(3) }}</span>
+              <span class="text-muted-foreground">→</span>
+              <span class="text-muted-foreground">{{ task.score_b.toFixed(3) }}</span>
+              <span :class="diffColor(task.diff > 0.01 ? 'up' : task.diff < -0.01 ? 'down' : 'equal')">
+                {{ (task.diff >= 0 ? '+' : '') + task.diff.toFixed(3) }}
+              </span>
+              <Badge :class="statusVariant(task.status)">{{ task.status }}</Badge>
+            </button>
+            <div v-if="expandedTasks.has(task.task_id)" class="border-t border-gray-200 p-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <p class="text-sm font-medium text-zinc-900 mb-2">Run A</p>
+                  <div v-if="task.trials_a?.length" class="space-y-2">
+                    <div v-for="(trial, i) in task.trials_a" :key="i" class="border border-gray-200 rounded p-2 text-xs space-y-1">
+                      <div class="flex items-center gap-2">
+                        <span>Trial #{{ i }}</span>
+                        <Badge :class="trial.status === 'passed' ? 'bg-success-light text-success border-0' : trial.status === 'failed' ? 'bg-warning-light text-warning border-0' : 'bg-error-light text-error border-0'" class="text-xs">
+                          {{ trial.status }}
+                        </Badge>
+                        <span class="text-muted-foreground">Score: {{ trial.score.toFixed(3) }}</span>
+                      </div>
+                      <div v-for="g in (trial.grades || [])" :key="g.grader_type" class="pl-3 flex items-center gap-1.5">
+                        <Badge :class="g.pass ? 'bg-success-light text-success border-0' : 'bg-error-light text-error border-0'" class="text-xs">{{ g.grader_type }}</Badge>
+                        <span>{{ g.score.toFixed(3) }}</span>
+                        <span v-if="g.reason" class="text-muted-foreground">— {{ g.reason }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p v-else class="text-sm text-muted-foreground">No Run A trials</p>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-zinc-900 mb-2">Run B</p>
+                  <div v-if="task.trials_b?.length" class="space-y-2">
+                    <div v-for="(trial, i) in task.trials_b" :key="i" class="border border-gray-200 rounded p-2 text-xs space-y-1">
+                      <div class="flex items-center gap-2">
+                        <span>Trial #{{ i }}</span>
+                        <Badge :class="trial.status === 'passed' ? 'bg-success-light text-success border-0' : trial.status === 'failed' ? 'bg-warning-light text-warning border-0' : 'bg-error-light text-error border-0'" class="text-xs">
+                          {{ trial.status }}
+                        </Badge>
+                        <span class="text-muted-foreground">Score: {{ trial.score.toFixed(3) }}</span>
+                      </div>
+                      <div v-for="g in (trial.grades || [])" :key="g.grader_type" class="pl-3 flex items-center gap-1.5">
+                        <Badge :class="g.pass ? 'bg-success-light text-success border-0' : 'bg-error-light text-error border-0'" class="text-xs">{{ g.grader_type }}</Badge>
+                        <span>{{ g.score.toFixed(3) }}</span>
+                        <span v-if="g.reason" class="text-muted-foreground">— {{ g.reason }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p v-else class="text-sm text-muted-foreground">No Run B trials</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 </template>

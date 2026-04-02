@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { NMessageProvider, NDialogProvider, NConfigProvider } from 'naive-ui'
+import { Toaster } from '@/components/ui/sonner'
 </script>
 
 <template>
-  <NConfigProvider>
-    <NMessageProvider>
-      <NDialogProvider>
-        <router-view />
-      </NDialogProvider>
-    </NMessageProvider>
-  </NConfigProvider>
+  <Toaster position="top-right" :duration="3000" />
+  <router-view />
 </template>

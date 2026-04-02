@@ -1,14 +1,30 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import {
-  NSpace, NText, NButton, NTag, NEmpty, NModal, NSelect, NCard, NCheckbox, useMessage,
-} from 'naive-ui'
+import { toast } from 'vue-sonner'
 import { useProjectStore } from '@/stores/project'
 import { useRunStore } from '@/stores/run'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { startRun } from '@/api/runs'
 import { listConfigs } from '@/api/configs'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { EvalRun, ActiveRun } from '@/types'
 
 const projectStore = useProjectStore()
@@ -16,7 +32,6 @@ const runStore = useRunStore()
 const { currentProjectName } = storeToRefs(projectStore)
 const { activeRuns, recentRuns } = storeToRefs(runStore)
 const router = useRouter()
-const message = useMessage()
 
 const showNewRun = ref(false)
 const configs = ref<string[]>([])
@@ -67,10 +82,10 @@ async function handleStartRun() {
     const resp = await startRun(currentProjectName.value, selectedConfig.value)
     showNewRun.value = false
     starting.value = false
-    message.success(`Run started: ${resp.run_id.slice(0, 8)}`, { duration: 3000 })
+    toast.success(`Run started: ${resp.run_id.slice(0, 8)}`)
     router.push({ name: 'run-detail', params: { id: resp.run_id } })
   } catch (e: unknown) {
-    message.error(`Failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    toast.error(`Failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
     starting.value = false
   }
 }
@@ -86,73 +101,98 @@ function viewActiveRun(run: ActiveRun) {
 function formatDate(s: string): string {
   return s ? new Date(s).toLocaleString() : '-'
 }
-
-const configOptions = computed(() =>
-  configs.value.map((c) => ({ label: c, value: c })),
-)
 </script>
 
 <template>
-  <NSpace vertical :size="16">
-    <NSpace justify="space-between" align="center">
-      <NText tag="h1" style="margin: 0">Runs</NText>
-      <NSpace>
-        <NButton :disabled="!canCompare" @click="goCompare">Compare</NButton>
-        <NButton type="primary" :disabled="!currentProjectName" @click="showNewRun = true">New Run</NButton>
-      </NSpace>
-    </NSpace>
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-xl font-semibold text-zinc-900 tracking-tight">Runs</h1>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" :disabled="!canCompare" @click="goCompare">Compare</Button>
+        <Button :disabled="!currentProjectName" @click="showNewRun = true">New Run</Button>
+      </div>
+    </div>
 
     <template v-if="currentProjectName">
       <template v-if="activeRuns.length > 0">
-        <NText tag="h3">Active Runs</NText>
-        <NCard v-for="run in activeRuns" :key="run.id" size="small" hoverable style="cursor: pointer; margin-bottom: 8px" @click="viewActiveRun(run)">
-          <NSpace justify="space-between" align="center">
-            <NSpace align="center">
-              <NTag type="info" size="small">Running</NTag>
-              <NText code>{{ run.id.slice(0, 8) }}</NText>
-            </NSpace>
-            <NText depth="3">Started {{ formatDate(run.started_at) }}</NText>
-          </NSpace>
-        </NCard>
+        <h3 class="text-base font-medium text-zinc-900">Active Runs</h3>
+        <Card
+          v-for="run in activeRuns"
+          :key="run.id"
+          class="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-primary"
+          @click="viewActiveRun(run)"
+        >
+          <CardContent class="py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <Badge class="bg-blue-50 text-blue-600 border-0">Running</Badge>
+              <code class="text-sm bg-zinc-100 px-1.5 py-0.5 rounded">{{ run.id.slice(0, 8) }}</code>
+            </div>
+            <span class="text-sm text-muted-foreground">Started {{ formatDate(run.started_at) }}</span>
+          </CardContent>
+        </Card>
       </template>
 
-      <NText tag="h3">Run History</NText>
+      <h3 class="text-base font-medium text-zinc-900">Run History</h3>
       <template v-if="recentRuns.length > 0">
-        <NCard v-for="run in recentRuns" :key="run.id" size="small" hoverable style="margin-bottom: 8px">
-          <NSpace justify="space-between" align="center">
-            <NSpace align="center">
-              <NCheckbox
+        <Card v-for="run in recentRuns" :key="run.id" class="hover:shadow-sm transition-shadow">
+          <CardContent class="py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <input
+                type="checkbox"
                 :checked="isRunSelected(run.id)"
                 :disabled="isRunDisabled(run.id)"
-                @update:checked="toggleRunSelection(run.id)"
+                class="h-4 w-4 rounded border-gray-300 text-primary accent-primary"
+                @change="toggleRunSelection(run.id)"
                 @click.stop
               />
-              <NSpace align="center" style="cursor: pointer" @click="viewRun(run)">
-                <NText strong>{{ run.suite_name }}</NText>
-                <NText depth="3">{{ run.agent_type }}</NText>
-              </NSpace>
-            </NSpace>
-            <NSpace align="center" style="cursor: pointer" @click="viewRun(run)">
-              <NTag type="success" size="small">{{ ((run.summary?.overall_pass_rate ?? 0) * 100).toFixed(0) }}%</NTag>
-              <NText depth="3">{{ ((run.duration_ms ?? 0) / 1000).toFixed(1) }}s</NText>
-              <NText depth="3">{{ formatDate(run.started_at) }}</NText>
-            </NSpace>
-          </NSpace>
-        </NCard>
+              <div class="flex items-center gap-2 cursor-pointer" @click="viewRun(run)">
+                <span class="text-sm font-medium text-zinc-900">{{ run.suite_name }}</span>
+                <span class="text-sm text-muted-foreground">{{ run.agent_type }}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 cursor-pointer" @click="viewRun(run)">
+              <Badge class="bg-success-light text-success border-0">
+                {{ ((run.summary?.overall_pass_rate ?? 0) * 100).toFixed(0) }}%
+              </Badge>
+              <span class="text-sm text-muted-foreground">{{ ((run.duration_ms ?? 0) / 1000).toFixed(1) }}s</span>
+              <span class="text-sm text-muted-foreground">{{ formatDate(run.started_at) }}</span>
+            </div>
+          </CardContent>
+        </Card>
       </template>
-      <NEmpty v-else description="No runs yet" />
+      <div v-else class="flex items-center justify-center py-12 text-sm text-muted-foreground">
+        No runs yet
+      </div>
     </template>
 
-    <NEmpty v-else description="Select a project first" />
+    <div v-else class="flex items-center justify-center py-12 text-sm text-muted-foreground">
+      Select a project first
+    </div>
 
-    <NModal v-model:show="showNewRun" title="Start New Run" preset="card" style="width: 400px">
-      <NSpace vertical :size="12">
-        <NSelect v-model:value="selectedConfig" :options="configOptions" placeholder="Select config file" />
-        <NSpace justify="end">
-          <NButton @click="showNewRun = false">Cancel</NButton>
-          <NButton type="primary" :loading="starting" :disabled="!selectedConfig" @click="handleStartRun">Start</NButton>
-        </NSpace>
-      </NSpace>
-    </NModal>
-  </NSpace>
+    <Dialog v-model:open="showNewRun">
+      <DialogContent class="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Start New Run</DialogTitle>
+        </DialogHeader>
+        <div class="py-4">
+          <Select v-model="selectedConfig">
+            <SelectTrigger class="w-full">
+              <SelectValue placeholder="Select config file" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="c in configs" :key="c" :value="c">{{ c }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <DialogClose as-child>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button :disabled="!selectedConfig || starting" @click="handleStartRun">
+            {{ starting ? 'Starting...' : 'Start' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
 </template>

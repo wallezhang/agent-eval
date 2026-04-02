@@ -61,3 +61,4 @@ build/
 docs/
 .claude/
 .superpowers/
+node_modules/

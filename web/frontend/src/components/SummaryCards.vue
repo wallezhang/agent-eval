@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NCard, NGrid, NGridItem, NStatistic } from 'naive-ui'
+import { Card, CardContent } from '@/components/ui/card'
 
 export interface SummaryCard {
   label: string
@@ -13,13 +13,14 @@ defineProps<{
 </script>
 
 <template>
-  <NGrid :cols="4" :x-gap="16" :y-gap="16">
-    <NGridItem v-for="card in cards" :key="card.label">
-      <NCard size="small">
-        <NStatistic :label="card.label" :value="card.value">
-          <template v-if="card.suffix" #suffix>{{ card.suffix }}</template>
-        </NStatistic>
-      </NCard>
-    </NGridItem>
-  </NGrid>
+  <div class="grid grid-cols-4 gap-4">
+    <Card v-for="card in cards" :key="card.label">
+      <CardContent class="pt-6">
+        <p class="text-xs text-muted-foreground uppercase tracking-wide">{{ card.label }}</p>
+        <p class="text-2xl font-bold text-zinc-900 mt-1">
+          {{ card.value }}<span v-if="card.suffix" class="text-lg font-normal text-muted">{{ card.suffix }}</span>
+        </p>
+      </CardContent>
+    </Card>
+  </div>
 </template>
