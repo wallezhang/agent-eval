@@ -37,6 +37,11 @@ export const router = createRouter({
           props: true,
         },
         {
+          path: 'compare',
+          name: 'compare',
+          component: () => import('@/views/CompareView.vue'),
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),

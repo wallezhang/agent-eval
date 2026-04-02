@@ -208,3 +208,105 @@ export interface StartRunResponse {
   run_id: string
   status: string
 }
+
+// Compare result types
+export interface RunMeta {
+  id: string
+  suite_name: string
+  agent_type: string
+  started_at: string
+}
+
+export interface MetricDiff {
+  a: number
+  b: number
+  diff: number
+}
+
+export interface CompareSummary {
+  pass_rate: MetricDiff
+  avg_score: MetricDiff
+  avg_pass_at_k: MetricDiff
+  avg_pass_power_k: MetricDiff
+}
+
+export interface CompareGradeDetail {
+  grader_type: string
+  score: number
+  pass: boolean
+  reason: string
+}
+
+export interface CompareTrialDetail {
+  status: string
+  score: number
+  grades: CompareGradeDetail[]
+}
+
+export interface TaskComparison {
+  task_id: string
+  score_a: number
+  score_b: number
+  diff: number
+  status: 'improved' | 'regressed' | 'unchanged'
+  trials_a: CompareTrialDetail[]
+  trials_b: CompareTrialDetail[]
+}
+
+export interface CompareResult {
+  run_a: RunMeta
+  run_b: RunMeta
+  summary: CompareSummary
+  tasks: TaskComparison[]
+}
+
+// Compare result types
+export interface RunMeta {
+  id: string
+  suite_name: string
+  agent_type: string
+  started_at: string
+}
+
+export interface MetricDiff {
+  a: number
+  b: number
+  diff: number
+}
+
+export interface CompareSummary {
+  pass_rate: MetricDiff
+  avg_score: MetricDiff
+  avg_pass_at_k: MetricDiff
+  avg_pass_power_k: MetricDiff
+}
+
+export interface CompareGradeDetail {
+  grader_type: string
+  score: number
+  pass: boolean
+  reason: string
+}
+
+export interface CompareTrialDetail {
+  status: string
+  score: number
+  grades: CompareGradeDetail[]
+}
+
+export interface TaskComparison {
+  task_id: string
+  score_a: number
+  score_b: number
+  diff: number
+  status: 'improved' | 'regressed' | 'unchanged'
+  trials_a: CompareTrialDetail[]
+  trials_b: CompareTrialDetail[]
+}
+
+export interface CompareResult {
+  run_a: RunMeta
+  run_b: RunMeta
+  summary: CompareSummary
+  tasks: TaskComparison[]
+}

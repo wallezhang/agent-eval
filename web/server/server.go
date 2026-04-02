@@ -81,6 +81,8 @@ func (s *Server) buildRouter() {
 		r.Delete("/runs/{id}", s.handleDeleteRun)
 		r.Post("/runs/{id}/cancel", s.handleCancelRun)
 		r.Get("/runs/{id}/sse", s.handleSSE)
+
+		r.Get("/compare", s.handleCompareRuns)
 	})
 
 	// Metadata

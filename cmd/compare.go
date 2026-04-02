@@ -53,7 +53,8 @@ func compareRuns(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("finding run B: %w", err)
 	}
 
-	return report.CompareRuns(runA, runB)
+	result := report.CompareRuns(runA, runB)
+	return report.FormatCompareText(result, cmd.OutOrStdout())
 }
 
 func findRun(ctx context.Context, store *storage.SQLiteStore, idPrefix string) (*model.EvalRun, error) {

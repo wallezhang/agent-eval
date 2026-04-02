@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import {
-  NSpace, NText, NButton, NTag, NEmpty, NModal, NSelect, NCard, useMessage,
+  NSpace, NText, NButton, NTag, NEmpty, NModal, NSelect, NCard, NCheckbox, useMessage,
 } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 import { useRunStore } from '@/stores/run'
@@ -22,14 +22,43 @@ const showNewRun = ref(false)
 const configs = ref<string[]>([])
 const selectedConfig = ref<string | null>(null)
 const starting = ref(false)
+const selectedRunIds = ref<string[]>([])
+
+const canCompare = computed(() => selectedRunIds.value.length === 2)
 
 async function loadData() {
   if (!currentProjectName.value) return
+  selectedRunIds.value = []
   await runStore.refresh(currentProjectName.value)
   configs.value = await listConfigs(currentProjectName.value)
 }
 
 watch(currentProjectName, loadData, { immediate: true })
+
+function toggleRunSelection(runId: string) {
+  const idx = selectedRunIds.value.indexOf(runId)
+  if (idx >= 0) {
+    selectedRunIds.value.splice(idx, 1)
+  } else if (selectedRunIds.value.length < 2) {
+    selectedRunIds.value.push(runId)
+  }
+}
+
+function isRunSelected(runId: string): boolean {
+  return selectedRunIds.value.includes(runId)
+}
+
+function isRunDisabled(runId: string): boolean {
+  return selectedRunIds.value.length >= 2 && !selectedRunIds.value.includes(runId)
+}
+
+function goCompare() {
+  if (!canCompare.value) return
+  router.push({
+    name: 'compare',
+    query: { runA: selectedRunIds.value[0], runB: selectedRunIds.value[1] },
+  })
+}
 
 async function handleStartRun() {
   if (!currentProjectName.value || !selectedConfig.value) return
@@ -67,7 +96,10 @@ const configOptions = computed(() =>
   <NSpace vertical :size="16">
     <NSpace justify="space-between" align="center">
       <NText tag="h1" style="margin: 0">Runs</NText>
-      <NButton type="primary" :disabled="!currentProjectName" @click="showNewRun = true">New Run</NButton>
+      <NSpace>
+        <NButton :disabled="!canCompare" @click="goCompare">Compare</NButton>
+        <NButton type="primary" :disabled="!currentProjectName" @click="showNewRun = true">New Run</NButton>
+      </NSpace>
     </NSpace>
 
     <template v-if="currentProjectName">
@@ -86,13 +118,21 @@ const configOptions = computed(() =>
 
       <NText tag="h3">Run History</NText>
       <template v-if="recentRuns.length > 0">
-        <NCard v-for="run in recentRuns" :key="run.id" size="small" hoverable style="cursor: pointer; margin-bottom: 8px" @click="viewRun(run)">
+        <NCard v-for="run in recentRuns" :key="run.id" size="small" hoverable style="margin-bottom: 8px">
           <NSpace justify="space-between" align="center">
             <NSpace align="center">
-              <NText strong>{{ run.suite_name }}</NText>
-              <NText depth="3">{{ run.agent_type }}</NText>
+              <NCheckbox
+                :checked="isRunSelected(run.id)"
+                :disabled="isRunDisabled(run.id)"
+                @update:checked="toggleRunSelection(run.id)"
+                @click.stop
+              />
+              <NSpace align="center" style="cursor: pointer" @click="viewRun(run)">
+                <NText strong>{{ run.suite_name }}</NText>
+                <NText depth="3">{{ run.agent_type }}</NText>
+              </NSpace>
             </NSpace>
-            <NSpace align="center">
+            <NSpace align="center" style="cursor: pointer" @click="viewRun(run)">
               <NTag type="success" size="small">{{ ((run.summary?.overall_pass_rate ?? 0) * 100).toFixed(0) }}%</NTag>
               <NText depth="3">{{ ((run.duration_ms ?? 0) / 1000).toFixed(1) }}s</NText>
               <NText depth="3">{{ formatDate(run.started_at) }}</NText>
