@@ -129,3 +129,33 @@ cd my-eval
 # 编辑 eval.yaml 和 tasks/sample.yaml，然后：
 agent-eval run
 ```
+
+## agent-eval server
+
+启动 Web UI 服务。前端嵌入在二进制文件中，无需额外安装。
+
+```bash
+agent-eval server [flags]
+```
+
+### 参数
+
+| 标志 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `-p, --port` | int | `8080` | 服务监听端口 |
+| `--home` | string | `~/.agent-eval` | 项目注册表所在的主目录 |
+
+### 示例
+
+```bash
+# 使用默认配置启动（端口 8080）
+agent-eval server
+
+# 自定义端口
+agent-eval server -p 3000
+
+# 自定义主目录
+agent-eval server --home /data/agent-eval
+```
+
+在浏览器中打开 [http://localhost:8080](http://localhost:8080) 即可管理项目、编辑配置、运行评测（实时进度）和查看结果。各页面详细说明请参考 [Web UI 指南](/zh/guide/web-ui)。

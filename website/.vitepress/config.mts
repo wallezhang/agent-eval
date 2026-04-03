@@ -3,6 +3,9 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'AgentEval',
   description: 'A YAML-config-driven CLI tool for evaluating AI agents',
+  ignoreDeadLinks: [
+    /^http:\/\/localhost/
+  ],
 
   locales: {
     en: {
@@ -25,6 +28,7 @@ export default defineConfig({
               items: [
                 { text: 'Quick Start', link: '/en/guide/quick-start' },
                 { text: 'Core Concepts', link: '/en/guide/concepts' },
+                { text: 'Web UI', link: '/en/guide/web-ui' },
                 { text: 'Examples', link: '/en/guide/examples' },
                 { text: 'Advanced Usage', link: '/en/guide/advanced' }
               ]
@@ -62,6 +66,7 @@ export default defineConfig({
               items: [
                 { text: '快速开始', link: '/zh/guide/quick-start' },
                 { text: '核心概念', link: '/zh/guide/concepts' },
+                { text: 'Web UI', link: '/zh/guide/web-ui' },
                 { text: '示例', link: '/zh/guide/examples' },
                 { text: '高级用法', link: '/zh/guide/advanced' }
               ]

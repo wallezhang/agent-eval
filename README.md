@@ -235,7 +235,19 @@ Starts the web UI server. Open `http://localhost:8080` in a browser to manage pr
 - YAML config editor with syntax highlighting (CodeMirror 6) and live validation
 - Run evaluations from the browser with real-time SSE progress streaming
 - View detailed results: pass rates, scores, latency percentiles, per-trial grade breakdowns
+- Compare two runs side by side — bar charts, metrics table, per-task drill-down
 - Single binary — frontend is embedded via `go:embed`
+
+**Pages:**
+
+| Page | Description |
+|------|-------------|
+| Dashboard | Summary cards (total runs, avg pass rate, active runs) and recent runs table |
+| Configurations | File tree browser + YAML editor with real-time validation and quick-insert templates |
+| Runs | Start new runs, view active runs with live progress, browse run history, compare any 2 runs |
+| Results | Per-task expandable results with trial-level grades, scores, agent output, and metadata |
+| Compare | Side-by-side run comparison with ECharts bar chart, metrics diff table, and per-task drill-down |
+| Settings | Project information (name, path, database path) |
 
 ## Configuration Reference
 

@@ -129,3 +129,33 @@ cd my-eval
 # Edit eval.yaml and tasks/sample.yaml, then:
 agent-eval run
 ```
+
+## agent-eval server
+
+Start the Web UI server. The frontend is embedded in the binary — no separate install needed.
+
+```bash
+agent-eval server [flags]
+```
+
+### Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-p, --port` | int | `8080` | Server listen port |
+| `--home` | string | `~/.agent-eval` | Home directory for project registry |
+
+### Examples
+
+```bash
+# Start with defaults (port 8080)
+agent-eval server
+
+# Custom port
+agent-eval server -p 3000
+
+# Custom home directory
+agent-eval server --home /data/agent-eval
+```
+
+Open [http://localhost:8080](http://localhost:8080) in your browser to manage projects, edit configs, run evaluations with real-time progress, and view results. See the [Web UI guide](/en/guide/web-ui) for details on each page.
